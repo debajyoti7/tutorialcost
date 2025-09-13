@@ -159,25 +159,32 @@ export default function InputForm({ onAnalyze, isLoading = false }: InputFormPro
             </div>
           </form>
           
-          <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-            <h3 className="text-sm font-medium text-foreground mb-2">Supported Platforms</h3>
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="secondary" className="gap-1">
-                <Youtube className="w-3 h-3" />
-                YouTube
-              </Badge>
-              <Badge variant="secondary" className="gap-1">
-                <Podcast className="w-3 h-3" />
-                Spotify Podcasts
-              </Badge>
-              <Badge variant="secondary" className="gap-1">
-                <Podcast className="w-3 h-3" />
-                Apple Podcasts
-              </Badge>
-              <Badge variant="secondary" className="gap-1">
-                <Podcast className="w-3 h-3" />
-                RSS Feeds
-              </Badge>
+          <div className="mt-6 space-y-4">
+            <div className="p-4 bg-muted/50 rounded-lg">
+              <h3 className="text-sm font-medium text-foreground mb-2">Supported Platforms</h3>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="secondary" className="gap-1">
+                  <Youtube className="w-3 h-3" />
+                  YouTube
+                </Badge>
+                <Badge variant="secondary" className="gap-1">
+                  <Podcast className="w-3 h-3" />
+                  Spotify Podcasts
+                </Badge>
+                <Badge variant="secondary" className="gap-1">
+                  <Podcast className="w-3 h-3" />
+                  Apple Podcasts
+                </Badge>
+                <Badge variant="secondary" className="gap-1">
+                  <Podcast className="w-3 h-3" />
+                  RSS Feeds
+                </Badge>
+              </div>
+            </div>
+            
+            <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border-l-2 border-blue-500">
+              <p className="text-xs font-medium text-foreground mb-1">💡 Best Results:</p>
+              <p className="text-xs text-muted-foreground">Educational videos, tutorials, tech talks, and podcasts with transcripts work best. Videos without available transcripts cannot be analyzed.</p>
             </div>
           </div>
         </CardContent>

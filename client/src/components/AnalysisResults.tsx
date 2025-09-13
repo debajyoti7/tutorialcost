@@ -2,6 +2,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useToast } from "@/hooks/use-toast";
 import { 
   ExternalLink, 
   DollarSign, 
@@ -10,7 +12,10 @@ import {
   Star,
   TrendingUp,
   Download,
-  Share2
+  Share2,
+  FileText,
+  FileSpreadsheet,
+  Copy
 } from "lucide-react";
 
 export interface Tool {
@@ -59,6 +64,8 @@ interface AnalysisResultsProps {
 }
 
 export default function AnalysisResults({ data, onNewAnalysis }: AnalysisResultsProps) {
+  const { toast } = useToast();
+  
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case 'Beginner': return 'bg-emerald text-emerald-foreground';
@@ -74,6 +81,134 @@ export default function AnalysisResults({ data, onNewAnalysis }: AnalysisResults
       case 'Medium': return 'bg-amber text-amber-foreground';
       case 'High': return 'bg-destructive text-destructive-foreground';
       default: return 'bg-secondary text-secondary-foreground';
+    }
+  };
+
+  const handleExportJSON = () => {
+    try {
+      const exportData = {
+        ...data,
+        exportedAt: new Date().toISOString(),
+        summary: {
+          experimentsCount: data.experiments.length,
+          toolsCount: data.tools.length,
+          totalEstimatedCost: data.totalEstimatedCost,
+          processingTime: data.processingTime
+        }
+      };
+      
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { 
+        type: 'application/json' 
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `content-analysis-${Date.now()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Export Successful",
+        description: "Analysis data exported as JSON file",
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Failed to export analysis data",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleExportCSV = () => {
+    try {
+      // Create CSV content
+      let csvContent = "Content Analysis Report\n\n";
+      csvContent += `Title,${data.contentInfo.title}\n`;
+      csvContent += `Platform,${data.contentInfo.platform}\n`;
+      csvContent += `Duration,${data.contentInfo.duration}\n`;
+      csvContent += `Processing Time,${data.processingTime}s\n`;
+      csvContent += `Total Estimated Cost,$${data.totalEstimatedCost}\n\n`;
+      
+      // Experiments section
+      csvContent += "Experiments\n";
+      csvContent += "Title,Description,Timestamp,Complexity,Estimated Cost,Tools Used\n";
+      data.experiments.forEach(exp => {
+        const toolsList = exp.tools.join('; ');
+        csvContent += `"${exp.title}","${exp.description}","${exp.timestamp}","${exp.complexity}","$${exp.estimatedCost}","${toolsList}"\n`;
+      });
+      
+      csvContent += "\nTools\n";
+      csvContent += "Name,Category,Description,Difficulty,Monthly Cost,Free Tier,Implementation Time,URL\n";
+      data.tools.forEach(tool => {
+        const monthlyCost = tool.pricing.monthly ? `$${tool.pricing.monthly}` : 'N/A';
+        csvContent += `"${tool.name}","${tool.category}","${tool.description}","${tool.difficulty}","${monthlyCost}","${tool.pricing.free ? 'Yes' : 'No'}","${tool.timeToImplement}","${tool.url}"\n`;
+      });
+      
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `content-analysis-${Date.now()}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Export Successful",
+        description: "Analysis data exported as CSV file",
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Failed to export analysis data",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleShare = async () => {
+    try {
+      const shareText = `Content Analysis Results: ${data.contentInfo.title}
+      
+Found ${data.experiments.length} LLM experiments and ${data.tools.length} tools with an estimated cost of $${data.totalEstimatedCost}/month.
+
+Experiments:
+${data.experiments.map(exp => `• ${exp.title} (${exp.complexity} complexity)`).join('\n')}
+
+Key Tools:
+${data.tools.slice(0, 5).map(tool => `• ${tool.name} - ${tool.category}`).join('\n')}
+
+Analyzed with Content Analyzer for LLM Experiments`;
+
+      if (navigator.share) {
+        await navigator.share({
+          title: 'Content Analysis Results',
+          text: shareText,
+          url: window.location.href
+        });
+        
+        toast({
+          title: "Shared Successfully",
+          description: "Analysis results shared",
+        });
+      } else {
+        // Fallback to clipboard
+        await navigator.clipboard.writeText(shareText);
+        toast({
+          title: "Copied to Clipboard",
+          description: "Analysis summary copied to clipboard",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Share Failed",
+        description: "Failed to share analysis results",
+        variant: "destructive",
+      });
     }
   };
 
@@ -97,14 +232,34 @@ export default function AnalysisResults({ data, onNewAnalysis }: AnalysisResults
               </CardDescription>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" data-testid="button-share">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleShare}
+                data-testid="button-share"
+              >
                 <Share2 className="w-4 h-4 mr-2" />
                 Share
               </Button>
-              <Button variant="outline" size="sm" data-testid="button-export">
-                <Download className="w-4 h-4 mr-2" />
-                Export
-              </Button>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" data-testid="button-export">
+                    <Download className="w-4 h-4 mr-2" />
+                    Export
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleExportJSON} data-testid="export-json">
+                    <FileText className="w-4 h-4 mr-2" />
+                    Export as JSON
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportCSV} data-testid="export-csv">
+                    <FileSpreadsheet className="w-4 h-4 mr-2" />
+                    Export as CSV
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </CardHeader>

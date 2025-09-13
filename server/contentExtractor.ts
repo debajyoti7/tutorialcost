@@ -11,8 +11,34 @@ export async function extractYouTubeContent(url: string): Promise<ContentInfo> {
   try {
     console.log('Extracting YouTube content from:', url);
     
-    // Get transcript
-    const transcriptItems = await YoutubeTranscript.fetchTranscript(url);
+    // Get transcript with better error handling
+    let transcriptItems;
+    try {
+      transcriptItems = await YoutubeTranscript.fetchTranscript(url);
+    } catch (transcriptError) {
+      console.log('Initial transcript fetch failed, trying with different options:', transcriptError);
+      
+      // Try different language configurations if the first attempt fails
+      try {
+        transcriptItems = await YoutubeTranscript.fetchTranscript(url, {
+          lang: 'en'
+        });
+      } catch (secondError) {
+        console.log('English transcript not available, trying any available language:', secondError);
+        
+        // Last attempt: try to get any transcript regardless of language
+        try {
+          const videoId = extractVideoId(url);
+          if (videoId) {
+            // Try without language specification to get any available transcript
+            transcriptItems = await YoutubeTranscript.fetchTranscript(videoId);
+          }
+        } catch (finalError) {
+          console.log('All transcript attempts failed:', finalError);
+          throw new Error('No transcript available for this video');
+        }
+      }
+    }
     
     if (!transcriptItems || transcriptItems.length === 0) {
       throw new Error('No transcript available for this video');
@@ -49,6 +75,15 @@ export async function extractYouTubeContent(url: string): Promise<ContentInfo> {
     };
   } catch (error) {
     console.error('YouTube extraction failed:', error);
+    
+    if (error instanceof Error && (
+      error.message.includes('No transcript available') ||
+      error.message.includes('Transcript is disabled') ||
+      error.message.includes('transcript could not be retrieved')
+    )) {
+      throw new Error('This YouTube video doesn\'t have a transcript available. Please try a different video. Videos with transcripts work best - these are usually educational content, tutorials, tech talks, or videos with auto-generated captions enabled. Note: Some popular YouTubers and channels may have transcripts disabled.');
+    }
+    
     throw new Error(`Failed to extract YouTube content: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
@@ -59,18 +94,22 @@ export async function extractPodcastContent(url: string): Promise<ContentInfo> {
   throw new Error('Podcast content analysis is not yet supported. Please use YouTube video URLs instead. We support all YouTube video formats including educational content, podcasts uploaded to YouTube, and technical discussions.');
 }
 
+function extractVideoId(url: string): string | null {
+  const videoIdMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/);
+  return videoIdMatch ? videoIdMatch[1] : null;
+}
+
 async function extractVideoTitle(url: string): Promise<string> {
   try {
-    // Extract video ID
-    const videoIdMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/);
+    const videoId = extractVideoId(url);
     
-    if (!videoIdMatch) {
+    if (!videoId) {
       return "YouTube Video";
     }
 
     // TODO: Use YouTube Data API to get real title
-    // For now, return a generic title
-    return "YouTube Video";
+    // For now, return a generic title with video ID for debugging
+    return `YouTube Video (${videoId})`;
   } catch (error) {
     console.error('Failed to extract video title:', error);
     return "YouTube Video";

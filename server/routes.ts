@@ -175,7 +175,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Analysis failed:', error);
       const processingTime = Math.round((Date.now() - startTime) / 1000);
       
-      res.status(500).json({ 
+      // Return 400 for client errors (like no transcript available)
+      const statusCode = error instanceof Error && 
+        (error.message.includes('transcript available') || 
+         error.message.includes('not yet supported') ||
+         error.message.includes('Invalid URL')) ? 400 : 500;
+      
+      res.status(statusCode).json({ 
         error: error instanceof Error ? error.message : 'Analysis failed',
         processingTime
       });
