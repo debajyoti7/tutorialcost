@@ -81,10 +81,10 @@ ${transcript.slice(0, 15000)} ${transcript.length > 15000 ? '...[truncated]' : '
 
 Analyze this content and identify LLM experiments and tools as specified.`;
 
-    const model = ai.getGenerativeModel({ 
+    const response = await ai.models.generateContent({
       model: "gemini-2.5-pro",
-      systemInstruction: systemPrompt,
-      generationConfig: {
+      config: {
+        systemInstruction: systemPrompt,
         responseMimeType: "application/json",
         responseSchema: {
           type: "object",
@@ -122,11 +122,11 @@ Analyze this content and identify LLM experiments and tools as specified.`;
           },
           required: ["experiments", "tools"]
         }
-      }
+      },
+      contents: prompt
     });
 
-    const response = await model.generateContent(prompt);
-    const rawJson = response.response.text();
+    const rawJson = response.text;
     console.log(`Gemini analysis response: ${rawJson?.slice(0, 500)}...`);
 
     if (rawJson) {
