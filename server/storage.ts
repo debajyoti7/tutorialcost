@@ -47,15 +47,29 @@ export class MemStorage implements IStorage {
         pricingTiers: [
           {
             tier: "ChatGPT Plus",
-            monthly: 20,
+            monthlyMin: 20,
+            monthlyMax: 20,
+            priceType: "fixed" as const,
             features: ["GPT-4 access", "Advanced data analysis", "Web browsing", "Custom GPTs"],
             usage: "40 messages per 3 hours"
           },
           {
-            tier: "API Usage",
-            monthly: 0,
+            tier: "API Usage (GPT-4o)",
+            monthlyMin: 0,
+            monthlyMax: 500,
+            priceType: "per-token" as const,
             features: ["Pay per token", "Higher rate limits", "Programmatic access"],
-            usage: "$0.03/1K tokens (input), $0.06/1K tokens (output)"
+            usage: "$2.50/1M input tokens, $10/1M output tokens",
+            usageUnit: "per 1M tokens"
+          },
+          {
+            tier: "API Usage (GPT-4o Mini)",
+            monthlyMin: 0,
+            monthlyMax: 100,
+            priceType: "per-token" as const,
+            features: ["Cost-effective", "Fast responses", "Programmatic access"],
+            usage: "$0.15/1M input tokens, $0.60/1M output tokens",
+            usageUnit: "per 1M tokens"
           }
         ],
         difficulty: "Beginner",
@@ -71,15 +85,27 @@ export class MemStorage implements IStorage {
         pricingTiers: [
           {
             tier: "Starter",
-            monthly: 0,
-            features: ["1M vectors", "1 pod", "Community support"],
-            usage: "Free tier"
+            monthlyMin: 0,
+            monthlyMax: 0,
+            priceType: "free" as const,
+            features: ["1 index", "1 project", "Community support"],
+            usage: "Free tier with limitations"
           },
           {
             tier: "Standard",
-            monthly: 70,
-            features: ["5M vectors", "Multiple pods", "Email support"],
-            usage: "Up to 5M vectors"
+            monthlyMin: 50,
+            monthlyMax: 500,
+            priceType: "usage-based" as const,
+            features: ["Multiple indexes", "Production ready", "Email support"],
+            usage: "$50 minimum, then pay-as-you-go"
+          },
+          {
+            tier: "Enterprise",
+            monthlyMin: 500,
+            monthlyMax: 5000,
+            priceType: "usage-based" as const,
+            features: ["Advanced features", "Dedicated support", "SLA"],
+            usage: "$500 minimum commitment"
           }
         ],
         difficulty: "Intermediate",
@@ -95,15 +121,20 @@ export class MemStorage implements IStorage {
         pricingTiers: [
           {
             tier: "Open Source",
-            monthly: 0,
+            monthlyMin: 0,
+            monthlyMax: 0,
+            priceType: "free" as const,
             features: ["Core framework", "Community support", "Basic integrations"],
             usage: "Free to use"
           },
           {
-            tier: "LangSmith",
-            monthly: 39,
-            features: ["Debugging tools", "Monitoring", "Advanced analytics"],
-            usage: "For teams and production"
+            tier: "LangSmith Plus",
+            monthlyMin: 39,
+            monthlyMax: 390,
+            priceType: "usage-based" as const,
+            features: ["Debugging tools", "Monitoring", "10k traces/month"],
+            usage: "$39/user/month + usage fees",
+            usageUnit: "per user"
           }
         ],
         difficulty: "Intermediate",
@@ -119,15 +150,29 @@ export class MemStorage implements IStorage {
         pricingTiers: [
           {
             tier: "Claude Pro",
-            monthly: 20,
-            features: ["Claude 3 Opus access", "100K context window", "Priority access"],
-            usage: "5x more usage than free tier"
+            monthlyMin: 20,
+            monthlyMax: 20,
+            priceType: "fixed" as const,
+            features: ["5x more usage", "Priority access", "Early features"],
+            usage: "Higher message limits"
           },
           {
-            tier: "API Usage",
-            monthly: 0,
-            features: ["Pay per token", "Programmatic access", "Multiple models"],
-            usage: "Starting at $0.25/1K tokens"
+            tier: "API (Claude 3.5 Sonnet)",
+            monthlyMin: 0,
+            monthlyMax: 800,
+            priceType: "per-token" as const,
+            features: ["Best performance/cost ratio", "Long context", "Reasoning"],
+            usage: "$3/1M input tokens, $15/1M output tokens",
+            usageUnit: "per 1M tokens"
+          },
+          {
+            tier: "API (Claude 3.5 Haiku)",
+            monthlyMin: 0,
+            monthlyMax: 200,
+            priceType: "per-token" as const,
+            features: ["Fastest responses", "Cost-effective", "Good for simple tasks"],
+            usage: "$0.80/1M input tokens, $4/1M output tokens",
+            usageUnit: "per 1M tokens"
           }
         ],
         difficulty: "Beginner",
@@ -143,7 +188,9 @@ export class MemStorage implements IStorage {
         pricingTiers: [
           {
             tier: "Pay per use",
-            monthly: 0,
+            monthlyMin: 0,
+            monthlyMax: 200,
+            priceType: "usage-based" as const,
             features: ["Thousands of models", "GPU infrastructure", "API access"],
             usage: "$0.0002-$0.01 per second depending on model"
           }
@@ -161,15 +208,20 @@ export class MemStorage implements IStorage {
         pricingTiers: [
           {
             tier: "Free",
-            monthly: 0,
+            monthlyMin: 0,
+            monthlyMax: 0,
+            priceType: "free" as const,
             features: ["Public repositories", "Inference API", "Community"],
             usage: "Rate limited"
           },
           {
             tier: "Pro",
-            monthly: 9,
+            monthlyMin: 9,
+            monthlyMax: 90,
+            priceType: "usage-based" as const,
             features: ["Private repositories", "Higher limits", "Early access"],
-            usage: "Enhanced features"
+            usage: "Enhanced features",
+            usageUnit: "per user"
           }
         ],
         difficulty: "Intermediate",
@@ -239,7 +291,8 @@ export class MemStorage implements IStorage {
       ...insertTool,
       isActive: insertTool.isActive ?? true,
       pricingTiers: insertTool.pricingTiers as any,
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      pricingUpdatedAt: new Date()
     };
     this.tools.set(tool.id, tool);
     return tool;
@@ -270,7 +323,8 @@ export class MemStorage implements IStorage {
       ...tool,
       ...updates,
       pricingTiers: (updates.pricingTiers || tool.pricingTiers) as any,
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      pricingUpdatedAt: new Date()
     };
     this.tools.set(id, updatedTool);
     return updatedTool;

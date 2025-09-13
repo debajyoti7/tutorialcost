@@ -50,14 +50,18 @@ export const toolDatabase = pgTable("tool_database", {
   baseUrl: text("base_url").notNull(),
   pricingTiers: jsonb("pricing_tiers").notNull().$type<{
     tier: string;
-    monthly: number;
+    monthlyMin: number;
+    monthlyMax?: number;
     features: string[];
     usage?: string;
+    priceType: 'fixed' | 'usage-based' | 'per-token' | 'free';
+    usageUnit?: string; // e.g., 'per 1M tokens', 'per request'
   }[]>(),
   difficulty: text("difficulty").notNull(), // 'Beginner' | 'Intermediate' | 'Advanced'
   avgImplementationTime: text("avg_implementation_time").notNull(),
   isActive: boolean("is_active").default(true).notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  pricingUpdatedAt: timestamp("pricing_updated_at").defaultNow().notNull(),
 });
 
 export const insertAnalysisSchema = createInsertSchema(analyses).omit({
