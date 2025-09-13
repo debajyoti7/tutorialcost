@@ -17,7 +17,8 @@ export const analyses = pgTable("analyses", {
     description: string;
     timestamp: string;
     tools: string[];
-    estimatedCost: number;
+    estimatedCostMin: number;
+    estimatedCostMax: number;
     complexity: 'Low' | 'Medium' | 'High';
   }[]>(),
   tools: jsonb("tools").notNull().$type<{
@@ -27,7 +28,8 @@ export const analyses = pgTable("analyses", {
     description: string;
     pricing: {
       free: boolean;
-      monthly?: number;
+      monthlyMin?: number;
+      monthlyMax?: number;
       usage?: string;
       features: string[];
     };
@@ -36,7 +38,14 @@ export const analyses = pgTable("analyses", {
     url: string;
     mentioned: string[];
   }[]>(),
-  totalEstimatedCost: integer("total_estimated_cost").notNull(),
+  summary: jsonb("summary").notNull().$type<{
+    totalExperiments: number;
+    totalToolsRequired: number;
+    overallCostRangeMin: number;
+    overallCostRangeMax: number;
+    implementationTimeEstimate: string;
+    difficultyLevel: 'Low' | 'Medium' | 'High';
+  }>(),
   processingTime: integer("processing_time").notNull(), // in seconds
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

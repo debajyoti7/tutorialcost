@@ -16,7 +16,8 @@ export interface AnalysisResponse {
     description: string;
     timestamp: string;
     tools: string[];
-    estimatedCost: number;
+    estimatedCostMin: number;
+    estimatedCostMax: number;
     complexity: 'Low' | 'Medium' | 'High';
   }[];
   tools: {
@@ -26,7 +27,8 @@ export interface AnalysisResponse {
     description: string;
     pricing: {
       free: boolean;
-      monthly?: number;
+      monthlyMin?: number;
+      monthlyMax?: number;
       usage?: string;
       features: string[];
     };
@@ -35,7 +37,14 @@ export interface AnalysisResponse {
     url: string;
     mentioned: string[];
   }[];
-  totalEstimatedCost: number;
+  summary: {
+    totalExperiments: number;
+    totalToolsRequired: number;
+    overallCostRangeMin: number;
+    overallCostRangeMax: number;
+    implementationTimeEstimate: string;
+    difficultyLevel: 'Low' | 'Medium' | 'High';
+  };
   processingTime: number;
 }
 
@@ -68,7 +77,10 @@ export async function getAnalyses(): Promise<{
   url: string;
   experimentsCount: number;
   toolsCount: number;
-  totalEstimatedCost: number;
+  summary: {
+    overallCostRangeMin: number;
+    overallCostRangeMax: number;
+  };
   createdAt: string;
 }[]> {
   const response = await fetch('/api/analyses');

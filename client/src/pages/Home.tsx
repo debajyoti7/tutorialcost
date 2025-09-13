@@ -26,7 +26,7 @@ export default function Home() {
         contentInfo: result.contentInfo,
         experiments: result.experiments,
         tools: result.tools,
-        totalEstimatedCost: result.totalEstimatedCost,
+        summary: result.summary,
         processingTime: result.processingTime
       };
       

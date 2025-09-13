@@ -15,7 +15,8 @@ import {
   Share2,
   FileText,
   FileSpreadsheet,
-  Copy
+  Copy,
+  AlertCircle
 } from "lucide-react";
 
 export interface Tool {
@@ -25,7 +26,8 @@ export interface Tool {
   description: string;
   pricing: {
     free: boolean;
-    monthly?: number;
+    monthlyMin?: number;
+    monthlyMax?: number;
     usage?: string;
     features: string[];
   };
@@ -41,7 +43,8 @@ export interface Experiment {
   description: string;
   timestamp: string;
   tools: string[];
-  estimatedCost: number;
+  estimatedCostMin: number;
+  estimatedCostMax: number;
   complexity: 'Low' | 'Medium' | 'High';
 }
 
@@ -54,7 +57,14 @@ export interface AnalysisData {
   };
   experiments: Experiment[];
   tools: Tool[];
-  totalEstimatedCost: number;
+  summary: {
+    totalExperiments: number;
+    totalToolsRequired: number;
+    overallCostRangeMin: number;
+    overallCostRangeMax: number;
+    implementationTimeEstimate: string;
+    difficultyLevel: 'Low' | 'Medium' | 'High';
+  };
   processingTime: number;
 }
 
@@ -92,7 +102,8 @@ export default function AnalysisResults({ data, onNewAnalysis }: AnalysisResults
         summary: {
           experimentsCount: data.experiments.length,
           toolsCount: data.tools.length,
-          totalEstimatedCost: data.totalEstimatedCost,
+          totalEstimatedCostMin: data.summary.overallCostRangeMin,
+          totalEstimatedCostMax: data.summary.overallCostRangeMax,
           processingTime: data.processingTime
         }
       };
@@ -130,14 +141,14 @@ export default function AnalysisResults({ data, onNewAnalysis }: AnalysisResults
       csvContent += `Platform,${data.contentInfo.platform}\n`;
       csvContent += `Duration,${data.contentInfo.duration}\n`;
       csvContent += `Processing Time,${data.processingTime}s\n`;
-      csvContent += `Total Estimated Cost,$${data.totalEstimatedCost}\n\n`;
+      csvContent += `Total Estimated Cost Range,$${data.summary.overallCostRangeMin}-$${data.summary.overallCostRangeMax}\n\n`;
       
       // Experiments section
       csvContent += "Experiments\n";
       csvContent += "Title,Description,Timestamp,Complexity,Estimated Cost,Tools Used\n";
       data.experiments.forEach(exp => {
         const toolsList = exp.tools.join('; ');
-        csvContent += `"${exp.title}","${exp.description}","${exp.timestamp}","${exp.complexity}","$${exp.estimatedCost}","${toolsList}"\n`;
+        csvContent += `"${exp.title}","${exp.description}","${exp.timestamp}","${exp.complexity}","$${exp.estimatedCostMin}-$${exp.estimatedCostMax}","${toolsList}"\n`;
       });
       
       csvContent += "\nTools\n";
@@ -174,7 +185,7 @@ export default function AnalysisResults({ data, onNewAnalysis }: AnalysisResults
     try {
       const shareText = `Content Analysis Results: ${data.contentInfo.title}
       
-Found ${data.experiments.length} LLM experiments and ${data.tools.length} tools with an estimated cost of $${data.totalEstimatedCost}/month.
+Found ${data.experiments.length} LLM experiments and ${data.tools.length} tools with an estimated cost range of $${data.summary.overallCostRangeMin}-$${data.summary.overallCostRangeMax}/month.
 
 Experiments:
 ${data.experiments.map(exp => `• ${exp.title} (${exp.complexity} complexity)`).join('\n')}
@@ -274,8 +285,10 @@ Analyzed with Content Analyzer for LLM Experiments`;
               <div className="text-sm text-muted-foreground">Tools Identified</div>
             </div>
             <div className="text-center p-4 bg-emerald/10 rounded-lg">
-              <div className="text-2xl font-bold text-emerald">${data.totalEstimatedCost}</div>
-              <div className="text-sm text-muted-foreground">Est. Monthly Cost</div>
+              <div className="text-2xl font-bold text-emerald">
+                ${data.summary.overallCostRangeMin}-${data.summary.overallCostRangeMax}
+              </div>
+              <div className="text-sm text-muted-foreground">Est. Monthly Cost Range</div>
             </div>
           </div>
         </CardContent>
@@ -304,7 +317,9 @@ Analyzed with Content Analyzer for LLM Experiments`;
                   <div className="space-y-3">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Timestamp: {experiment.timestamp}</span>
-                      <span className="font-medium text-emerald">${experiment.estimatedCost}/mo</span>
+                      <span className="font-medium text-emerald">
+                        ${experiment.estimatedCostMin}-${experiment.estimatedCostMax}/mo
+                      </span>
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {experiment.tools.map((toolId) => {
@@ -362,7 +377,13 @@ Analyzed with Content Analyzer for LLM Experiments`;
                       ) : (
                         <div className="text-right">
                           <div className="font-semibold text-foreground">
-                            ${tool.pricing.monthly}/mo
+                            {tool.pricing.monthlyMin && tool.pricing.monthlyMax ? (
+                              `$${tool.pricing.monthlyMin}-${tool.pricing.monthlyMax}/mo`
+                            ) : tool.pricing.monthlyMin ? (
+                              `$${tool.pricing.monthlyMin}/mo`
+                            ) : (
+                              'Contact for pricing'
+                            )}
                           </div>
                           {tool.pricing.usage && (
                             <div className="text-xs text-muted-foreground">
@@ -415,6 +436,22 @@ Analyzed with Content Analyzer for LLM Experiments`;
           </div>
         </div>
       </div>
+
+      {/* Pricing Disclaimer */}
+      <Card className="bg-muted/30">
+        <CardContent className="pt-4">
+          <div className="flex items-start gap-2 text-sm text-muted-foreground">
+            <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <div>
+              <strong className="text-foreground">Pricing Disclaimer:</strong>
+              {" "}
+              Cost ranges are estimated using 2025 pricing data, last updated September 2025. 
+              Actual costs may vary based on usage, subscription tiers, and current pricing. 
+              Please verify current pricing on each tool's official website.
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Action buttons */}
       <div className="flex justify-center pt-6">

@@ -262,6 +262,7 @@ export class MemStorage implements IStorage {
       transcript: insertAnalysis.transcript || null,
       experiments: insertAnalysis.experiments as any,
       tools: insertAnalysis.tools as any,
+      summary: insertAnalysis.summary as any,
       id,
       createdAt: new Date()
     };

@@ -45,7 +45,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
           experiments: latest.experiments,
           tools: latest.tools,
-          totalEstimatedCost: latest.totalEstimatedCost,
+          summary: latest.summary,
           processingTime: latest.processingTime
         });
       }
@@ -89,8 +89,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         if (dbTool) {
           // Use database tool info with AI context
-          const freeTier = dbTool.pricingTiers.find(tier => tier.monthly === 0);
-          const paidTier = dbTool.pricingTiers.find(tier => tier.monthly > 0);
+          const freeTier = dbTool.pricingTiers.find(tier => tier.monthlyMin === 0);
+          const paidTier = dbTool.pricingTiers.find(tier => tier.monthlyMin > 0);
           const defaultTier = paidTier || freeTier || dbTool.pricingTiers[0];
 
           detailedTools.push({
@@ -100,7 +100,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             description: dbTool.description,
             pricing: {
               free: !!freeTier,
-              monthly: defaultTier?.monthly,
+              monthlyMin: defaultTier?.monthlyMin,
+              monthlyMax: defaultTier?.monthlyMax,
               usage: defaultTier?.usage,
               features: defaultTier?.features || []
             },
@@ -110,8 +111,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             mentioned: aiTool.mentioned
           });
 
-          if (defaultTier?.monthly) {
-            totalCost += defaultTier.monthly;
+          if (defaultTier?.monthlyMin) {
+            totalCost += defaultTier.monthlyMin;
           }
         } else {
           // Use AI tool info as fallback
@@ -122,7 +123,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             description: aiTool.description,
             pricing: {
               free: false,
-              monthly: 20, // Default estimate
+              monthlyMin: 15,
+              monthlyMax: 25,
               usage: "Estimated",
               features: ["AI-identified tool"]
             },
@@ -135,9 +137,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Calculate total estimated cost from experiments
-      const experimentTotalCost = aiAnalysis.experiments.reduce((sum, exp) => sum + exp.estimatedCost, 0);
-      const finalTotalCost = Math.max(totalCost, experimentTotalCost);
+      // Use the summary from AI analysis instead of manual calculation
+      // The aiAnalysis.summary already contains the proper cost range calculations
 
       const processingTime = Math.round((Date.now() - startTime) / 1000);
 
@@ -150,7 +151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         transcript: contentInfo.transcript,
         experiments: aiAnalysis.experiments,
         tools: detailedTools,
-        totalEstimatedCost: finalTotalCost,
+        summary: aiAnalysis.summary,
         processingTime
       };
 
@@ -167,7 +168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
         experiments: aiAnalysis.experiments,
         tools: detailedTools,
-        totalEstimatedCost: finalTotalCost,
+        summary: aiAnalysis.summary,
         processingTime
       });
 
@@ -199,7 +200,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         url: analysis.url,
         experimentsCount: analysis.experiments.length,
         toolsCount: analysis.tools.length,
-        totalEstimatedCost: analysis.totalEstimatedCost,
+        summary: analysis.summary,
         createdAt: analysis.createdAt
       })));
     } catch (error) {
@@ -226,7 +227,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
         experiments: analysis.experiments,
         tools: analysis.tools,
-        totalEstimatedCost: analysis.totalEstimatedCost,
+        summary: analysis.summary,
         processingTime: analysis.processingTime,
         createdAt: analysis.createdAt
       });

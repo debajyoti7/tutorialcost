@@ -15,7 +15,8 @@ export interface AnalysisResult {
     description: string;
     timestamp: string;
     tools: string[];
-    estimatedCost: number;
+    estimatedCostMin: number;
+    estimatedCostMax: number;
     complexity: 'Low' | 'Medium' | 'High';
   }[];
   tools: {
@@ -25,6 +26,14 @@ export interface AnalysisResult {
     description: string;
     mentioned: string[];
   }[];
+  summary: {
+    totalExperiments: number;
+    totalToolsRequired: number;
+    overallCostRangeMin: number;
+    overallCostRangeMax: number;
+    implementationTimeEstimate: string;
+    difficultyLevel: 'Low' | 'Medium' | 'High';
+  };
 }
 
 export async function analyzeContentForLLMExperiments(transcript: string, title: string): Promise<AnalysisResult> {
@@ -34,19 +43,28 @@ export async function analyzeContentForLLMExperiments(transcript: string, title:
 Your task is to analyze transcripts from podcasts and videos to identify:
 1. Specific LLM experiments or AI projects mentioned
 2. Tools, platforms, and services discussed
-3. Cost estimates for implementing similar experiments
+3. Realistic cost RANGES for implementing similar experiments (based on actual 2025 pricing)
 
 For each experiment found, extract:
 - Clear title and description
 - Timestamp if mentioned
 - Required tools/platforms
-- Estimated monthly cost to replicate
+- Realistic monthly cost range (minimum and maximum) considering different usage levels
 - Complexity level (Low/Medium/High)
 
 For each tool mentioned, extract:
 - Tool name and category
 - Brief description
 - Which experiments it's mentioned in
+
+Cost Guidelines (use actual 2025 pricing):
+- OpenAI GPT-4o: $0-500/month depending on usage (API: $2.50-10/1M tokens)
+- Claude 3.5: $0-800/month (API: $3-15/1M tokens)
+- Pinecone: $0-500/month (Free tier, then $50+ minimum)
+- LangChain/LangSmith: $0-390/month ($39/user + usage)
+- Consider free tiers, basic usage, and scale-up costs
+
+Provide a summary section with overall analysis.
 
 Focus only on concrete, actionable experiments - not theoretical discussions.
 
@@ -59,7 +77,8 @@ Respond with valid JSON in this exact format:
       "description": "what the experiment does",
       "timestamp": "12:34",
       "tools": ["tool1", "tool2"],
-      "estimatedCost": 50,
+      "estimatedCostMin": 25,
+      "estimatedCostMax": 150,
       "complexity": "Medium"
     }
   ],
@@ -71,7 +90,15 @@ Respond with valid JSON in this exact format:
       "description": "what it does",
       "mentioned": ["experiment context"]
     }
-  ]
+  ],
+  "summary": {
+    "totalExperiments": 1,
+    "totalToolsRequired": 2,
+    "overallCostRangeMin": 25,
+    "overallCostRangeMax": 150,
+    "implementationTimeEstimate": "2-4 hours",
+    "difficultyLevel": "Medium"
+  }
 }`;
 
     const prompt = `Content Title: ${title}
@@ -99,10 +126,11 @@ Analyze this content and identify LLM experiments and tools as specified.`;
                   description: { type: "string" },
                   timestamp: { type: "string" },
                   tools: { type: "array", items: { type: "string" } },
-                  estimatedCost: { type: "number" },
+                  estimatedCostMin: { type: "number" },
+                  estimatedCostMax: { type: "number" },
                   complexity: { type: "string" }
                 },
-                required: ["id", "title", "description", "timestamp", "tools", "estimatedCost", "complexity"]
+                required: ["id", "title", "description", "timestamp", "tools", "estimatedCostMin", "estimatedCostMax", "complexity"]
               }
             },
             tools: {
@@ -118,9 +146,21 @@ Analyze this content and identify LLM experiments and tools as specified.`;
                 },
                 required: ["id", "name", "category", "description", "mentioned"]
               }
+            },
+            summary: {
+              type: "object",
+              properties: {
+                totalExperiments: { type: "number" },
+                totalToolsRequired: { type: "number" },
+                overallCostRangeMin: { type: "number" },
+                overallCostRangeMax: { type: "number" },
+                implementationTimeEstimate: { type: "string" },
+                difficultyLevel: { type: "string" }
+              },
+              required: ["totalExperiments", "totalToolsRequired", "overallCostRangeMin", "overallCostRangeMax", "implementationTimeEstimate", "difficultyLevel"]
             }
           },
-          required: ["experiments", "tools"]
+          required: ["experiments", "tools", "summary"]
         }
       },
       contents: prompt
