@@ -17,7 +17,7 @@ export interface AnalysisResult {
     tools: string[];
     estimatedCostMin: number;
     estimatedCostMax: number;
-    complexity: 'Low' | 'Medium' | 'High';
+    complexity: "Low" | "Medium" | "High";
   }[];
   tools: {
     id: string;
@@ -32,11 +32,14 @@ export interface AnalysisResult {
     overallCostRangeMin: number;
     overallCostRangeMax: number;
     implementationTimeEstimate: string;
-    difficultyLevel: 'Low' | 'Medium' | 'High';
+    difficultyLevel: "Low" | "Medium" | "High";
   };
 }
 
-export async function analyzeContentForLLMExperiments(transcript: string, title: string): Promise<AnalysisResult> {
+export async function analyzeContentForLLMExperiments(
+  transcript: string,
+  title: string,
+): Promise<AnalysisResult> {
   try {
     const systemPrompt = `You are an expert AI researcher who specializes in identifying LLM experiments and automation tools from content.
 
@@ -104,12 +107,12 @@ Respond with valid JSON in this exact format:
     const prompt = `Content Title: ${title}
 
 Transcript:
-${transcript.slice(0, 15000)} ${transcript.length > 15000 ? '...[truncated]' : ''}
+${transcript.slice(0, 15000)} ${transcript.length > 15000 ? "...[truncated]" : ""}
 
 Analyze this content and identify LLM experiments and tools as specified.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-pro",
+      model: "gemini-2.5-flash", //"gemini-2.5-pro",
       config: {
         systemInstruction: systemPrompt,
         responseMimeType: "application/json",
@@ -128,10 +131,19 @@ Analyze this content and identify LLM experiments and tools as specified.`;
                   tools: { type: "array", items: { type: "string" } },
                   estimatedCostMin: { type: "number" },
                   estimatedCostMax: { type: "number" },
-                  complexity: { type: "string" }
+                  complexity: { type: "string" },
                 },
-                required: ["id", "title", "description", "timestamp", "tools", "estimatedCostMin", "estimatedCostMax", "complexity"]
-              }
+                required: [
+                  "id",
+                  "title",
+                  "description",
+                  "timestamp",
+                  "tools",
+                  "estimatedCostMin",
+                  "estimatedCostMax",
+                  "complexity",
+                ],
+              },
             },
             tools: {
               type: "array",
@@ -142,10 +154,16 @@ Analyze this content and identify LLM experiments and tools as specified.`;
                   name: { type: "string" },
                   category: { type: "string" },
                   description: { type: "string" },
-                  mentioned: { type: "array", items: { type: "string" } }
+                  mentioned: { type: "array", items: { type: "string" } },
                 },
-                required: ["id", "name", "category", "description", "mentioned"]
-              }
+                required: [
+                  "id",
+                  "name",
+                  "category",
+                  "description",
+                  "mentioned",
+                ],
+              },
             },
             summary: {
               type: "object",
@@ -155,15 +173,22 @@ Analyze this content and identify LLM experiments and tools as specified.`;
                 overallCostRangeMin: { type: "number" },
                 overallCostRangeMax: { type: "number" },
                 implementationTimeEstimate: { type: "string" },
-                difficultyLevel: { type: "string" }
+                difficultyLevel: { type: "string" },
               },
-              required: ["totalExperiments", "totalToolsRequired", "overallCostRangeMin", "overallCostRangeMax", "implementationTimeEstimate", "difficultyLevel"]
-            }
+              required: [
+                "totalExperiments",
+                "totalToolsRequired",
+                "overallCostRangeMin",
+                "overallCostRangeMax",
+                "implementationTimeEstimate",
+                "difficultyLevel",
+              ],
+            },
           },
-          required: ["experiments", "tools", "summary"]
-        }
+          required: ["experiments", "tools", "summary"],
+        },
       },
-      contents: prompt
+      contents: prompt,
     });
 
     const rawJson = response.text;
@@ -176,16 +201,20 @@ Analyze this content and identify LLM experiments and tools as specified.`;
       throw new Error("Empty response from Gemini");
     }
   } catch (error) {
-    console.error('Gemini analysis failed:', error);
-    throw new Error(`Failed to analyze content: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.error("Gemini analysis failed:", error);
+    throw new Error(
+      `Failed to analyze content: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
 }
 
 export async function extractVideoTitle(url: string): Promise<string> {
   try {
     // Extract video ID from various YouTube URL formats
-    const videoIdMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/);
-    
+    const videoIdMatch = url.match(
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+    );
+
     if (!videoIdMatch) {
       return "Unknown Video";
     }
@@ -193,7 +222,7 @@ export async function extractVideoTitle(url: string): Promise<string> {
     // For now, return a generic title - in production you'd use YouTube API
     return "Video Content"; // TODO: Integrate with YouTube Data API for real titles
   } catch (error) {
-    console.error('Failed to extract video title:', error);
+    console.error("Failed to extract video title:", error);
     return "Unknown Video";
   }
 }
