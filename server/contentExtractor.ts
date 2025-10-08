@@ -1,5 +1,6 @@
 import { YoutubeTranscript } from 'youtube-transcript';
 import fetch from 'node-fetch';
+import { google } from 'googleapis';
 
 export interface ContentInfo {
   title: string;
@@ -22,15 +23,34 @@ export async function extractYouTubeContent(url: string): Promise<ContentInfo> {
     let videoDescription = "";
     let hasDescription = false;
     
-    // First, try to get video metadata (title and description)
+    // First, get video metadata using YouTube Data API
+    const videoId = extractVideoId(url);
+    if (!videoId) {
+      throw new Error('Invalid YouTube URL - could not extract video ID');
+    }
+
     try {
-      const metadata = await extractVideoMetadata(url);
+      const metadata = await extractVideoMetadataWithAPI(videoId);
       videoTitle = metadata.title;
       videoDescription = metadata.description;
       hasDescription = videoDescription.length > 50; // Consider meaningful if > 50 chars
-      console.log(`Extracted metadata: title="${videoTitle}", description length=${videoDescription.length}`);
+      
+      // Check if captions are available via API
+      const hasCaptions = metadata.hasCaptions;
+      console.log(`API metadata: title="${videoTitle}", description length=${videoDescription.length}, captions available: ${hasCaptions}`);
     } catch (metadataError) {
-      console.log('Failed to extract video metadata:', metadataError);
+      console.log('YouTube API metadata fetch failed, falling back to HTML scraping:', metadataError);
+      
+      // Fallback to HTML scraping if API fails
+      try {
+        const metadata = await extractVideoMetadata(url);
+        videoTitle = metadata.title;
+        videoDescription = metadata.description;
+        hasDescription = videoDescription.length > 50;
+        console.log(`HTML metadata: title="${videoTitle}", description length=${videoDescription.length}`);
+      } catch (fallbackError) {
+        console.log('Both API and HTML metadata extraction failed:', fallbackError);
+      }
     }
     
     // Then try to get transcript with error handling
@@ -216,20 +236,80 @@ async function extractVideoMetadata(url: string): Promise<{ title: string; descr
   }
 }
 
-async function extractVideoTitle(url: string): Promise<string> {
+async function extractVideoMetadataWithAPI(videoId: string): Promise<{ title: string; description: string; duration: string; hasCaptions: boolean }> {
   try {
-    const videoId = extractVideoId(url);
+    const apiKey = process.env.YOUTUBE_API_KEY;
     
-    if (!videoId) {
-      return "YouTube Video";
+    if (!apiKey) {
+      throw new Error('YOUTUBE_API_KEY not configured');
     }
 
-    // TODO: Use YouTube Data API to get real title
-    // For now, return a generic title with video ID for debugging
-    return `YouTube Video (${videoId})`;
+    const youtube = google.youtube({
+      version: 'v3',
+      auth: apiKey
+    });
+
+    // Fetch video details
+    const videoResponse = await youtube.videos.list({
+      part: ['snippet', 'contentDetails'],
+      id: [videoId]
+    });
+
+    if (!videoResponse.data.items || videoResponse.data.items.length === 0) {
+      throw new Error('Video not found');
+    }
+
+    const video = videoResponse.data.items[0];
+    const snippet = video.snippet;
+    const contentDetails = video.contentDetails;
+
+    // Fetch caption tracks to check availability
+    let hasCaptions = false;
+    try {
+      const captionsResponse = await youtube.captions.list({
+        part: ['snippet'],
+        videoId: videoId
+      });
+      
+      hasCaptions = (captionsResponse.data.items && captionsResponse.data.items.length > 0) || false;
+      console.log(`Captions check: ${hasCaptions ? 'available' : 'not available'}`);
+    } catch (captionError) {
+      // Captions API might not be accessible, but continue
+      console.log('Could not check captions availability:', captionError);
+    }
+
+    // Parse duration from ISO 8601 format (PT1H2M10S)
+    let duration = '0:00';
+    if (contentDetails?.duration) {
+      duration = parseDuration(contentDetails.duration);
+    }
+
+    return {
+      title: snippet?.title || 'YouTube Video',
+      description: snippet?.description || '',
+      duration,
+      hasCaptions
+    };
   } catch (error) {
-    console.error('Failed to extract video title:', error);
-    return "YouTube Video";
+    console.error('YouTube API metadata extraction failed:', error);
+    throw error;
+  }
+}
+
+function parseDuration(isoDuration: string): string {
+  // Parse ISO 8601 duration format (PT1H2M10S) to MM:SS or H:MM:SS
+  const match = isoDuration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  
+  if (!match) return '0:00';
+  
+  const hours = parseInt(match[1] || '0', 10);
+  const minutes = parseInt(match[2] || '0', 10);
+  const seconds = parseInt(match[3] || '0', 10);
+  
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  } else {
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   }
 }
 
