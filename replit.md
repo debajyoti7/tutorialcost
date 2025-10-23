@@ -18,12 +18,14 @@ The UI design system is built on Tailwind CSS with custom CSS variables for them
 ### Backend Architecture
 The server runs on Express.js with TypeScript, following a REST API pattern. The main analysis endpoint (`/api/analyze`) handles the complete workflow from URL input to final results. Content extraction is handled by specialized modules that support YouTube transcripts and podcast content parsing.
 
-The AI analysis layer integrates with Google's Gemini API for intelligent content processing. The system analyzes transcripts to identify LLM experiments, extract tool mentions, estimate implementation costs, and categorize complexity levels. This creates structured data that feeds back to the frontend for presentation.
+The AI analysis layer integrates with Google's Gemini API for intelligent content processing. The system analyzes transcripts to identify LLM experiments, extract tool mentions, estimate implementation costs, and categorize complexity levels. Enhanced in October 2025 with context-aware pricing tier selection that respects AI-suggested tiers based on experiment complexity (learning vs production use). The system now tracks multiple pricing types (free, fixed, usage-based, per-token) and provides transparent tier recommendations with full pricing breakdowns.
+
+Intelligent pricing tier selection uses a flag-based matching system that prevents fallback logic from overriding valid AI recommendations. When Gemini suggests a specific tier (including free/self-hosted options), the system honors that recommendation rather than defaulting to paid tiers based on complexity alone.
 
 ### Data Storage Solutions
 The application uses Drizzle ORM with PostgreSQL as the primary database. The schema supports storing analysis results, content metadata, and a comprehensive tool database for pricing reference. Key tables include `analyses` for storing processed results and `toolDatabase` for maintaining tool pricing and feature information.
 
-Data is structured to support caching of analysis results, preventing duplicate processing of the same content URLs. The tool database serves as a reference system for consistent pricing calculations across different experiments.
+Data is structured to support caching of analysis results, preventing duplicate processing of the same content URLs. The tool database serves as a reference system with multi-tier pricing structures for each tool. Each tool can have multiple pricing tiers (e.g., Free, Starter, Pro, Enterprise) with different pricing types (free, fixed monthly, usage-based ranges, per-token costs), enabling accurate cost estimates across different use cases and scales.
 
 ### Authentication and Authorization
 Currently implements a basic session-based authentication system using PostgreSQL session storage with connect-pg-simple. The system includes user management capabilities but appears to be in early development stages, with the main focus on content analysis functionality.
