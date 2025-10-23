@@ -169,10 +169,6 @@ export default function InputForm({ onAnalyze, isLoading = false }: InputFormPro
                 </Badge>
                 <Badge variant="secondary" className="gap-1">
                   <Podcast className="w-3 h-3" />
-                  Spotify Podcasts
-                </Badge>
-                <Badge variant="secondary" className="gap-1">
-                  <Podcast className="w-3 h-3" />
                   Apple Podcasts
                 </Badge>
                 <Badge variant="secondary" className="gap-1">
