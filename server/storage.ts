@@ -227,6 +227,201 @@ export class MemStorage implements IStorage {
         difficulty: "Intermediate",
         avgImplementationTime: "2-4 hours",
         isActive: true
+      },
+      {
+        id: "chromadb",
+        name: "ChromaDB",
+        category: "Vector Database",
+        description: "Open-source embedding database for LLM applications",
+        baseUrl: "https://www.trychroma.com",
+        pricingTiers: [
+          {
+            tier: "Self-hosted (Free)",
+            monthlyMin: 0,
+            monthlyMax: 0,
+            priceType: "free" as const,
+            features: ["Open source", "Self-hosted", "Full features", "Community support"],
+            usage: "Free to self-host, infrastructure costs only"
+          },
+          {
+            tier: "Cloud (Light usage)",
+            monthlyMin: 0,
+            monthlyMax: 50,
+            priceType: "usage-based" as const,
+            features: ["Managed hosting", "Auto-scaling", "Support"],
+            usage: "Pay for storage and queries",
+            usageUnit: "per GB and per query"
+          },
+          {
+            tier: "Cloud (Production)",
+            monthlyMin: 50,
+            monthlyMax: 500,
+            priceType: "usage-based" as const,
+            features: ["High availability", "Advanced features", "Priority support"],
+            usage: "Based on data volume and throughput",
+            usageUnit: "per GB and per query"
+          }
+        ],
+        difficulty: "Beginner",
+        avgImplementationTime: "1-3 hours",
+        isActive: true
+      },
+      {
+        id: "supabase",
+        name: "Supabase",
+        category: "Database & Backend",
+        description: "Open-source Firebase alternative with PostgreSQL database",
+        baseUrl: "https://supabase.com",
+        pricingTiers: [
+          {
+            tier: "Free",
+            monthlyMin: 0,
+            monthlyMax: 0,
+            priceType: "free" as const,
+            features: ["500MB database", "5GB bandwidth", "50MB file storage", "Community support"],
+            usage: "2 free projects, paused after 1 week inactivity"
+          },
+          {
+            tier: "Pro",
+            monthlyMin: 25,
+            monthlyMax: 25,
+            priceType: "fixed" as const,
+            features: ["8GB database", "250GB bandwidth", "100GB file storage", "Email support"],
+            usage: "$25/month per project"
+          },
+          {
+            tier: "Pro (with usage)",
+            monthlyMin: 25,
+            monthlyMax: 500,
+            priceType: "usage-based" as const,
+            features: ["Unlimited projects", "Compute add-ons", "Custom domain", "Point-in-time recovery"],
+            usage: "$25 base + overages for compute/storage/bandwidth",
+            usageUnit: "per resource"
+          }
+        ],
+        difficulty: "Beginner",
+        avgImplementationTime: "2-4 hours",
+        isActive: true
+      },
+      {
+        id: "weaviate",
+        name: "Weaviate",
+        category: "Vector Database",
+        description: "AI-native vector database with semantic search capabilities",
+        baseUrl: "https://weaviate.io",
+        pricingTiers: [
+          {
+            tier: "Sandbox (Free)",
+            monthlyMin: 0,
+            monthlyMax: 0,
+            priceType: "free" as const,
+            features: ["14-day sandbox", "Limited resources", "Testing only"],
+            usage: "Free sandbox expires after 14 days"
+          },
+          {
+            tier: "Serverless",
+            monthlyMin: 0,
+            monthlyMax: 200,
+            priceType: "usage-based" as const,
+            features: ["Pay per query", "Auto-scaling", "No infrastructure management"],
+            usage: "$0.10 per million vector dimensions stored/month",
+            usageUnit: "per million dimensions"
+          },
+          {
+            tier: "Enterprise Cloud",
+            monthlyMin: 500,
+            monthlyMax: 5000,
+            priceType: "usage-based" as const,
+            features: ["Dedicated instances", "SLA", "Advanced security", "24/7 support"],
+            usage: "Custom pricing based on scale",
+            usageUnit: "per instance"
+          }
+        ],
+        difficulty: "Intermediate",
+        avgImplementationTime: "3-5 hours",
+        isActive: true
+      },
+      {
+        id: "n8n",
+        name: "n8n",
+        category: "Workflow Automation",
+        description: "Fair-code workflow automation platform for technical users",
+        baseUrl: "https://n8n.io",
+        pricingTiers: [
+          {
+            tier: "Self-hosted (Free)",
+            monthlyMin: 0,
+            monthlyMax: 0,
+            priceType: "free" as const,
+            features: ["Open source", "Unlimited workflows", "All integrations", "Self-managed"],
+            usage: "Free to self-host, infrastructure costs only"
+          },
+          {
+            tier: "Cloud Starter",
+            monthlyMin: 20,
+            monthlyMax: 20,
+            priceType: "fixed" as const,
+            features: ["2,500 executions/month", "All integrations", "Cloud hosting"],
+            usage: "$20/month flat rate"
+          },
+          {
+            tier: "Cloud Pro",
+            monthlyMin: 50,
+            monthlyMax: 500,
+            priceType: "usage-based" as const,
+            features: ["20,000+ executions", "Priority support", "Advanced features"],
+            usage: "$50 base + usage overages",
+            usageUnit: "per execution"
+          }
+        ],
+        difficulty: "Intermediate",
+        avgImplementationTime: "3-6 hours",
+        isActive: true
+      },
+      {
+        id: "elevenlabs",
+        name: "ElevenLabs",
+        category: "AI Voice Synthesis",
+        description: "AI-powered text-to-speech and voice cloning platform",
+        baseUrl: "https://elevenlabs.io",
+        pricingTiers: [
+          {
+            tier: "Free",
+            monthlyMin: 0,
+            monthlyMax: 0,
+            priceType: "free" as const,
+            features: ["10,000 characters/month", "3 custom voices", "Basic quality"],
+            usage: "10K characters limit"
+          },
+          {
+            tier: "Starter",
+            monthlyMin: 5,
+            monthlyMax: 5,
+            priceType: "fixed" as const,
+            features: ["30,000 characters/month", "10 custom voices", "High quality"],
+            usage: "$5/month for 30K characters"
+          },
+          {
+            tier: "Creator",
+            monthlyMin: 22,
+            monthlyMax: 22,
+            priceType: "fixed" as const,
+            features: ["100,000 characters/month", "30 custom voices", "Ultra quality", "Voice cloning"],
+            usage: "$22/month for 100K characters"
+          },
+          {
+            tier: "Pro",
+            monthlyMin: 99,
+            monthlyMax: 330,
+            priceType: "usage-based" as const,
+            features: ["500,000 characters/month", "Unlimited voices", "Commercial license", "API access"],
+            usage: "$99 base + overages at $0.30/1K characters",
+            usageUnit: "per 1K characters"
+          }
+        ],
+        difficulty: "Beginner",
+        avgImplementationTime: "1-2 hours",
+        isActive: true
       }
     ];
 

@@ -30,11 +30,21 @@ export interface Tool {
     monthlyMax?: number;
     usage?: string;
     features: string[];
+    priceType?: 'fixed' | 'usage-based' | 'per-token' | 'free';
+    tierName?: string;
+    allTiers?: {
+      tier: string;
+      monthlyMin: number;
+      monthlyMax?: number;
+      priceType: string;
+      usage?: string;
+    }[];
   };
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
   timeToImplement: string;
   url: string;
   mentioned: string[];
+  suggestedContext?: string;
 }
 
 export interface Experiment {
@@ -154,7 +164,11 @@ export default function AnalysisResults({ data, onNewAnalysis }: AnalysisResults
       csvContent += "\nTools\n";
       csvContent += "Name,Category,Description,Difficulty,Monthly Cost,Free Tier,Implementation Time,URL\n";
       data.tools.forEach(tool => {
-        const monthlyCost = tool.pricing.monthly ? `$${tool.pricing.monthly}` : 'N/A';
+        const monthlyCost = tool.pricing.monthlyMin && tool.pricing.monthlyMax 
+          ? `$${tool.pricing.monthlyMin}-${tool.pricing.monthlyMax}` 
+          : tool.pricing.monthlyMin 
+            ? `$${tool.pricing.monthlyMin}` 
+            : 'N/A';
         csvContent += `"${tool.name}","${tool.category}","${tool.description}","${tool.difficulty}","${monthlyCost}","${tool.pricing.free ? 'Yes' : 'No'}","${tool.timeToImplement}","${tool.url}"\n`;
       });
       
@@ -369,22 +383,41 @@ Analyzed with Content Analyzer for LLM Experiments`;
                         </Badge>
                       </div>
                     </div>
-                    <div className="text-right">
-                      {tool.pricing.free ? (
-                        <Badge variant="secondary" className="bg-emerald text-emerald-foreground">
-                          Free
-                        </Badge>
+                    <div className="text-right space-y-1">
+                      {tool.pricing.priceType === 'free' || (tool.pricing.free && tool.pricing.monthlyMin === 0) ? (
+                        <div className="space-y-1">
+                          <Badge variant="secondary" className="bg-emerald text-emerald-foreground">
+                            Free
+                          </Badge>
+                          {tool.pricing.tierName && (
+                            <div className="text-xs text-muted-foreground">
+                              {tool.pricing.tierName}
+                            </div>
+                          )}
+                        </div>
                       ) : (
-                        <div className="text-right">
+                        <div className="text-right space-y-1">
                           <div className="font-semibold text-foreground">
                             {tool.pricing.monthlyMin && tool.pricing.monthlyMax ? (
                               `$${tool.pricing.monthlyMin}-${tool.pricing.monthlyMax}/mo`
                             ) : tool.pricing.monthlyMin ? (
-                              `$${tool.pricing.monthlyMin}/mo`
+                              `$${tool.pricing.monthlyMin}+/mo`
                             ) : (
                               'Contact for pricing'
                             )}
                           </div>
+                          {tool.pricing.tierName && (
+                            <Badge variant="outline" className="text-xs">
+                              {tool.pricing.tierName}
+                            </Badge>
+                          )}
+                          {tool.pricing.priceType && (
+                            <div className="text-xs text-muted-foreground">
+                              {tool.pricing.priceType === 'usage-based' && 'Usage-based'}
+                              {tool.pricing.priceType === 'per-token' && 'Per-token'}
+                              {tool.pricing.priceType === 'fixed' && 'Fixed price'}
+                            </div>
+                          )}
                           {tool.pricing.usage && (
                             <div className="text-xs text-muted-foreground">
                               {tool.pricing.usage}
@@ -416,6 +449,45 @@ Analyzed with Content Analyzer for LLM Experiments`;
                         ))}
                       </ul>
                     </div>
+
+                    {tool.suggestedContext && (
+                      <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border-l-2 border-blue-500">
+                        <h4 className="text-sm font-medium text-foreground mb-1">Pricing Context:</h4>
+                        <p className="text-xs text-muted-foreground">{tool.suggestedContext}</p>
+                      </div>
+                    )}
+
+                    {tool.pricing.allTiers && tool.pricing.allTiers.length > 1 && (
+                      <div>
+                        <h4 className="text-sm font-medium text-foreground mb-2">Available Pricing Tiers:</h4>
+                        <div className="space-y-2">
+                          {tool.pricing.allTiers.map((tier, index) => (
+                            <div key={index} className="flex items-center justify-between text-xs p-2 bg-muted/30 rounded">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-foreground">{tier.tier}</span>
+                                {tier.priceType === 'free' && (
+                                  <Badge variant="secondary" className="text-xs bg-emerald text-emerald-foreground">Free</Badge>
+                                )}
+                              </div>
+                              <div className="text-right">
+                                <div className="font-medium text-foreground">
+                                  {tier.monthlyMin === 0 && !tier.monthlyMax ? (
+                                    'Free'
+                                  ) : tier.monthlyMax ? (
+                                    `$${tier.monthlyMin}-${tier.monthlyMax}/mo`
+                                  ) : (
+                                    `$${tier.monthlyMin}+/mo`
+                                  )}
+                                </div>
+                                {tier.usage && (
+                                  <div className="text-muted-foreground text-xs">{tier.usage}</div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {tool.mentioned.length > 0 && (
                       <div>

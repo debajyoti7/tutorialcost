@@ -88,10 +88,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
 
         if (dbTool) {
-          // Use database tool info with AI context
+          // Intelligently select pricing tier based on AI suggestion and experiment complexity
+          let selectedTier = dbTool.pricingTiers[0]; // Default to first tier
+          let tierMatched = false; // Track if we found a match
           const freeTier = dbTool.pricingTiers.find(tier => tier.monthlyMin === 0);
-          const paidTier = dbTool.pricingTiers.find(tier => tier.monthlyMin > 0);
-          const defaultTier = paidTier || freeTier || dbTool.pricingTiers[0];
+          const suggestedTierText = aiTool.suggestedTier?.toLowerCase() || "";
+          
+          // Try to match AI's suggested tier with database tiers
+          if (suggestedTierText) {
+            const matchedTier = dbTool.pricingTiers.find(tier => 
+              suggestedTierText.includes(tier.tier.toLowerCase()) ||
+              (suggestedTierText.includes('free') && tier.monthlyMin === 0) ||
+              (suggestedTierText.includes('self-hosted') && tier.tier.toLowerCase().includes('self-hosted')) ||
+              (suggestedTierText.includes('starter') && tier.tier.toLowerCase().includes('starter')) ||
+              (suggestedTierText.includes('pro') && tier.tier.toLowerCase().includes('pro')) ||
+              (suggestedTierText.includes('cloud') && tier.tier.toLowerCase().includes('cloud'))
+            );
+            if (matchedTier) {
+              selectedTier = matchedTier;
+              tierMatched = true;
+            }
+          }
+          
+          // Fallback: if no match was found, choose based on experiment complexity
+          if (!tierMatched && !suggestedTierText) {
+            const avgComplexity = aiAnalysis.experiments.length > 0 
+              ? aiAnalysis.experiments[0].complexity 
+              : "Medium";
+            
+            if (avgComplexity === "Low" && freeTier) {
+              selectedTier = freeTier;
+            } else if (avgComplexity === "High") {
+              // Choose highest tier for high complexity
+              selectedTier = dbTool.pricingTiers[dbTool.pricingTiers.length - 1];
+            } else {
+              // Medium complexity: choose middle or paid tier
+              const paidTier = dbTool.pricingTiers.find(tier => tier.monthlyMin > 0 && tier.monthlyMin < 100);
+              selectedTier = paidTier || dbTool.pricingTiers[Math.floor(dbTool.pricingTiers.length / 2)];
+            }
+          }
 
           detailedTools.push({
             id: dbTool.id,
@@ -100,19 +135,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
             description: dbTool.description,
             pricing: {
               free: !!freeTier,
-              monthlyMin: defaultTier?.monthlyMin,
-              monthlyMax: defaultTier?.monthlyMax,
-              usage: defaultTier?.usage,
-              features: defaultTier?.features || []
+              monthlyMin: selectedTier?.monthlyMin,
+              monthlyMax: selectedTier?.monthlyMax,
+              usage: selectedTier?.usage,
+              features: selectedTier?.features || [],
+              priceType: selectedTier?.priceType,
+              tierName: selectedTier?.tier,
+              allTiers: dbTool.pricingTiers.map(tier => ({
+                tier: tier.tier,
+                monthlyMin: tier.monthlyMin,
+                monthlyMax: tier.monthlyMax,
+                priceType: tier.priceType,
+                usage: tier.usage
+              }))
             },
             difficulty: dbTool.difficulty as 'Beginner' | 'Intermediate' | 'Advanced',
             timeToImplement: dbTool.avgImplementationTime,
             url: dbTool.baseUrl,
-            mentioned: aiTool.mentioned
+            mentioned: aiTool.mentioned,
+            suggestedContext: aiTool.suggestedTier
           });
 
-          if (defaultTier?.monthlyMin) {
-            totalCost += defaultTier.monthlyMin;
+          if (selectedTier?.monthlyMin) {
+            totalCost += selectedTier.monthlyMin;
           }
         } else {
           // Use AI tool info as fallback
@@ -126,12 +171,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
               monthlyMin: 15,
               monthlyMax: 25,
               usage: "Estimated",
-              features: ["AI-identified tool"]
+              features: ["AI-identified tool"],
+              priceType: "usage-based"
             },
             difficulty: 'Intermediate' as const,
             timeToImplement: "2-4 hours",
             url: `https://google.com/search?q=${encodeURIComponent(aiTool.name)}`,
-            mentioned: aiTool.mentioned
+            mentioned: aiTool.mentioned,
+            suggestedContext: aiTool.suggestedTier
           });
           totalCost += 20;
         }

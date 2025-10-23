@@ -25,6 +25,7 @@ export interface AnalysisResult {
     category: string;
     description: string;
     mentioned: string[];
+    suggestedTier?: string;
   }[];
   summary: {
     totalExperiments: number;
@@ -59,13 +60,40 @@ For each tool mentioned, extract:
 - Tool name and category
 - Brief description
 - Which experiments it's mentioned in
+- Suggested tier: Recommend the most appropriate pricing tier based on the experiment's context
+  * For learning/tutorial/prototype experiments: suggest free or starter tiers
+  * For production or scale experiments: suggest paid or usage-based tiers
+  * Examples: "Free tier", "Starter plan", "Self-hosted", "Cloud with light usage", "Pro tier"
 
-Cost Guidelines (use actual 2025 pricing):
-- OpenAI GPT-4o: $0-500/month depending on usage (API: $2.50-10/1M tokens)
-- Claude 3.5: $0-800/month (API: $3-15/1M tokens)
-- Pinecone: $0-500/month (Free tier, then $50+ minimum)
-- LangChain/LangSmith: $0-390/month ($39/user + usage)
-- Consider free tiers, basic usage, and scale-up costs
+Cost Guidelines (use actual 2025 pricing with tier context):
+
+LLM APIs (usage-based):
+- OpenAI GPT-4o: $0-500/month (API: $2.50-10/1M tokens) - suggest "Free tier" for learning, "API with moderate usage" for production
+- Claude 3.5: $0-800/month (API: $3-15/1M tokens) - suggest based on scale
+- Gemini: $0-300/month (Free tier available, then usage-based)
+
+Vector Databases (often usage-based or self-hosted):
+- ChromaDB: $0-500/month - suggest "Self-hosted (free)" for learning/small scale, "Cloud with light usage ($0-50)" for moderate use
+- Pinecone: $0-500/month - suggest "Free tier" for testing, "Standard ($50+)" for production
+- Weaviate: $0-200/month - suggest "Sandbox (free)" for learning, "Serverless" for production
+- Supabase: $0-500/month - suggest "Free" for learning, "Pro ($25+)" for production
+
+Workflow Automation (fixed + usage):
+- n8n: $0-500/month - suggest "Self-hosted (free)" for learning, "Cloud Starter ($20)" for small production
+- Zapier: $20-800/month - fixed tiers based on automation volume
+
+AI Services (mixed pricing):
+- ElevenLabs: $0-330/month - suggest "Free (10K chars)" for testing, "Creator ($22)" for moderate use
+- Replicate: $0-200/month - pure usage-based, suggest based on model usage
+
+Framework/Platform (often free with optional paid features):
+- LangChain: $0-390/month - suggest "Open source (free)" for most cases, "LangSmith Plus ($39+)" if debugging/monitoring needed
+- Hugging Face: $0-90/month - suggest "Free" for most cases
+
+IMPORTANT: Consider the experiment's scale and purpose when suggesting tiers:
+- Learning/Tutorial context → Free/Starter tiers
+- Small-scale production → Basic paid tiers
+- High-volume production → Usage-based or enterprise tiers
 
 Provide a summary section with overall analysis.
 
@@ -91,7 +119,8 @@ Respond with valid JSON in this exact format:
       "name": "Tool Name",
       "category": "Category",
       "description": "what it does",
-      "mentioned": ["experiment context"]
+      "mentioned": ["experiment context"],
+      "suggestedTier": "Free tier for learning, Pro ($25) for production"
     }
   ],
   "summary": {
@@ -155,6 +184,7 @@ Analyze this content and identify LLM experiments and tools as specified.`;
                   category: { type: "string" },
                   description: { type: "string" },
                   mentioned: { type: "array", items: { type: "string" } },
+                  suggestedTier: { type: "string" },
                 },
                 required: [
                   "id",
