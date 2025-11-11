@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Link as LinkIcon, Youtube, Podcast } from "lucide-react";
+import { Loader2, Link as LinkIcon, Youtube, Podcast, Sparkles, DollarSign, Clock, Layers, AlertCircle, CheckCircle2, XCircle } from "lucide-react";
 
 interface InputFormProps {
   onAnalyze: (url: string) => void;
@@ -88,15 +88,90 @@ export default function InputForm({
   const urlType = getUrlType(url);
 
   return (
-    <div className="w-full max-w-4xl mx-auto">
+    <div className="w-full max-w-5xl mx-auto space-y-8">
+      <div className="text-center space-y-4">
+        <h1 className="text-4xl md:text-5xl font-bold text-foreground">
+          Analyze LLM Experiments from Video Content
+        </h1>
+        <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
+          Extract AI experiments, discover required tools, and get accurate cost breakdowns 
+          from YouTube tutorials and tech talks
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="border-border">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <Sparkles className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground mb-1">AI-Powered Extraction</h3>
+                <p className="text-sm text-muted-foreground">
+                  Identifies LLM experiments with timestamps and descriptions
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <Layers className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground mb-1">Tool Discovery</h3>
+                <p className="text-sm text-muted-foreground">
+                  Lists all mentioned tools with detailed feature breakdowns
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <DollarSign className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground mb-1">Smart Pricing</h3>
+                <p className="text-sm text-muted-foreground">
+                  Context-aware tier selection with free and paid options
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <Clock className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground mb-1">Time Estimates</h3>
+                <p className="text-sm text-muted-foreground">
+                  Implementation difficulty and time-to-build projections
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card className="border-border shadow-lg">
         <CardHeader className="text-center pb-6">
           <CardTitle className="text-2xl font-bold text-foreground">
-            Analyze Content for LLM Experiments
+            Get Started
           </CardTitle>
           <CardDescription className="text-lg text-muted-foreground">
-            Paste a YouTube video or podcast URL to extract automation tools,
-            LLM experiments, and cost breakdowns
+            Paste a YouTube video URL to analyze
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -193,7 +268,7 @@ export default function InputForm({
 
             <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border-l-2 border-blue-500">
               <p className="text-xs font-medium text-foreground mb-1">
-                💡 Best Results:
+                Best Results:
               </p>
               <p className="text-xs text-muted-foreground">
                 Educational videos, tutorials, tech talks, and podcasts with
@@ -204,6 +279,78 @@ export default function InputForm({
           </div>
         </CardContent>
       </Card>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        <Card className="border-border">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
+              <CardTitle className="text-lg">What This Is</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-start gap-2">
+              <div className="w-1.5 h-1.5 bg-primary rounded-full mt-2" />
+              <p className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">LLM Experiment Analyzer</span> - Extracts AI/automation experiments from technical content
+              </p>
+            </div>
+            <div className="flex items-start gap-2">
+              <div className="w-1.5 h-1.5 bg-primary rounded-full mt-2" />
+              <p className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">Cost Estimator</span> - Provides accurate pricing for tools with context-aware tier recommendations
+              </p>
+            </div>
+            <div className="flex items-start gap-2">
+              <div className="w-1.5 h-1.5 bg-primary rounded-full mt-2" />
+              <p className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">Implementation Guide</span> - Estimates difficulty levels and time requirements
+              </p>
+            </div>
+            <div className="flex items-start gap-2">
+              <div className="w-1.5 h-1.5 bg-primary rounded-full mt-2" />
+              <p className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">Best for</span> - AI tutorials, automation workflows, LLM demos, and tech talks
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <XCircle className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+              <CardTitle className="text-lg">What This Isn't</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-start gap-2">
+              <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full mt-2" />
+              <p className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">General Transcription</span> - Not a video-to-text converter
+              </p>
+            </div>
+            <div className="flex items-start gap-2">
+              <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full mt-2" />
+              <p className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">Universal Content Analyzer</span> - Requires transcript availability (YouTube only)
+              </p>
+            </div>
+            <div className="flex items-start gap-2">
+              <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full mt-2" />
+              <p className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">Entertainment Content</span> - Won't extract useful data from non-technical videos
+              </p>
+            </div>
+            <div className="flex items-start gap-2">
+              <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full mt-2" />
+              <p className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">Guaranteed Results</span> - Content must mention specific LLM experiments or automation tools
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
