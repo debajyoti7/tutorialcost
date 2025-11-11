@@ -10,6 +10,8 @@ export type ErrorType =
   | 'network-error'
   | 'invalid-url'
   | 'empty-content'
+  | 'unsupported-platform'
+  | 'gemini-error'
   | 'generic';
 
 interface ErrorStateProps {
@@ -90,6 +92,30 @@ const errorConfigs = {
       'Try videos that are at least 5 minutes long',
       'Make sure the video has actual spoken content',
       'Educational content with demonstrations works best'
+    ]
+  },
+  'unsupported-platform': {
+    icon: Youtube,
+    title: 'Platform Not Supported',
+    description: 'Only YouTube videos are currently supported.',
+    color: 'text-indigo-600 dark:text-indigo-400',
+    bgColor: 'bg-indigo-50 dark:bg-indigo-950/30',
+    suggestions: [
+      'Please use a YouTube video URL (youtube.com or youtu.be)',
+      'Podcasts uploaded to YouTube are supported',
+      'All YouTube video formats work (tutorials, talks, demos)'
+    ]
+  },
+  'gemini-error': {
+    icon: Brain,
+    title: 'AI Analysis Error',
+    description: 'The AI service encountered an issue while analyzing the content.',
+    color: 'text-pink-600 dark:text-pink-400',
+    bgColor: 'bg-pink-50 dark:bg-pink-950/30',
+    suggestions: [
+      'This is usually temporary - wait a moment and try again',
+      'Very long videos (>1 hour) may time out - try a shorter video',
+      'The content might be too complex or unclear for analysis'
     ]
   },
   'generic': {

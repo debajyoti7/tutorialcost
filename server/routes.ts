@@ -5,7 +5,7 @@ import { extractYouTubeContent, extractPodcastContent, detectPlatform, validateU
 import { analyzeContentForLLMExperiments } from "./gemini";
 import { insertAnalysisSchema } from "@shared/schema";
 import { z } from "zod";
-import { AnalysisError, createNoExperimentsError } from "./errors";
+import { AnalysisError, createNoExperimentsError, createInvalidUrlError, createUnsupportedPlatformError } from "./errors";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Validation schemas
@@ -24,8 +24,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate URL format and platform
       const urlValidation = validateUrl(url);
       if (!urlValidation.isValid) {
-        return res.status(400).json({ 
-          error: urlValidation.error || "Invalid URL" 
+        const error = createInvalidUrlError();
+        const processingTime = Math.round((Date.now() - startTime) / 1000);
+        return res.status(error.statusCode).json({ 
+          type: error.type,
+          message: error.message,
+          details: urlValidation.error || error.details,
+          processingTime
         });
       }
 
@@ -60,8 +65,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (platform === 'Podcast') {
         contentInfo = await extractPodcastContent(url);
       } else {
-        return res.status(400).json({ 
-          error: "Unsupported platform. Please use YouTube or podcast URLs." 
+        const error = createUnsupportedPlatformError();
+        const processingTime = Math.round((Date.now() - startTime) / 1000);
+        return res.status(error.statusCode).json({ 
+          type: error.type,
+          message: error.message,
+          details: error.details,
+          processingTime
         });
       }
 
