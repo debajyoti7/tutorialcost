@@ -7,6 +7,96 @@ import { insertAnalysisSchema } from "@shared/schema";
 import { z } from "zod";
 import { AnalysisError, createNoExperimentsError, createInvalidUrlError, createUnsupportedPlatformError } from "./errors";
 
+// Parse pricing information from AI's suggested tier context
+function parsePricingFromContext(suggestedContext?: string): {
+  isFree: boolean;
+  monthlyMin: number;
+  monthlyMax: number | undefined;
+  priceType: string;
+} {
+  if (!suggestedContext) {
+    return { isFree: false, monthlyMin: 15, monthlyMax: 25, priceType: "usage-based" };
+  }
+
+  const contextLower = suggestedContext.toLowerCase();
+  
+  // Exclude non-permanent free options (trials, freemium without permanent free tier)
+  const excludeKeywords = ['free trial', 'trial period', 'demo'];
+  const hasExcludedTerm = excludeKeywords.some(keyword => contextLower.includes(keyword));
+  
+  // Check for genuine free indicators with more precise matching
+  const hasFreeKeyword = contextLower.includes('free tier') || 
+                        contextLower.includes('free version') ||
+                        contextLower.includes('no cost') ||
+                        (contextLower.includes('free') && !hasExcludedTerm);
+  
+  const hasSelfHosted = contextLower.includes('self-hosted') || 
+                        contextLower.includes('self hosted');
+  
+  const hasOpenSource = contextLower.includes('open-source') || 
+                        contextLower.includes('open source');
+  
+  // Check for $0 only when followed by space, slash, or end (not $0.50)
+  const hasZeroCost = /\$0(?:[\s\/]|$|[^.\d])/.test(contextLower);
+  
+  const hasFreeOption = hasFreeKeyword || hasSelfHosted || hasOpenSource || hasZeroCost;
+  
+  if (hasFreeOption && !hasExcludedTerm) {
+    // Extract all price values to see if there are paid options
+    const allPrices = contextLower.match(/\$(\d+(?:\.\d+)?)/g) || [];
+    const nonZeroPrices = allPrices.filter(price => {
+      const value = parseFloat(price.replace('$', ''));
+      return value > 0;
+    });
+    
+    if (nonZeroPrices.length > 0) {
+      // Has both free and paid options - extract the paid tier info for "optional" pricing
+      const costMatch = contextLower.match(/\$(\d+(?:\.\d+)?)\s*-?\s*(\d+(?:\.\d+)?)?/);
+      if (costMatch) {
+        const minCost = parseFloat(costMatch[1]);
+        const maxCost = costMatch[2] ? parseFloat(costMatch[2]) : undefined;
+        
+        // Convert hourly to monthly if needed (assume ~100 hrs/month for moderate usage)
+        const isHourly = contextLower.includes('/hr') || contextLower.includes('per hour');
+        const multiplier = isHourly ? 100 : 1;
+        
+        // Skip if the extracted price is actually $0.XX
+        if (minCost < 1 && isHourly) {
+          return {
+            isFree: true, // Has free option, showing optional cloud cost
+            monthlyMin: Math.round(minCost * multiplier),
+            monthlyMax: maxCost ? Math.round(maxCost * multiplier) : undefined,
+            priceType: "usage-based"
+          };
+        }
+      }
+    }
+    
+    // Pure free option with no paid tier mentioned
+    return { isFree: true, monthlyMin: 0, monthlyMax: undefined, priceType: "free" };
+  }
+  
+  // No free indicators - try to extract pricing
+  const costMatch = contextLower.match(/\$(\d+(?:\.\d+)?)\s*-?\s*(\d+(?:\.\d+)?)?/);
+  if (costMatch) {
+    const minCost = parseFloat(costMatch[1]);
+    const maxCost = costMatch[2] ? parseFloat(costMatch[2]) : undefined;
+    
+    const isHourly = contextLower.includes('/hr') || contextLower.includes('per hour');
+    const multiplier = isHourly ? 100 : 1;
+    
+    return {
+      isFree: false,
+      monthlyMin: Math.round(minCost * multiplier),
+      monthlyMax: maxCost ? Math.round(maxCost * multiplier) : undefined,
+      priceType: isHourly ? "usage-based" : "fixed"
+    };
+  }
+  
+  // Fallback to generic estimate
+  return { isFree: false, monthlyMin: 15, monthlyMax: 25, priceType: "usage-based" };
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Validation schemas
   const analyzeRequestSchema = z.object({
@@ -176,19 +266,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
             totalCost += selectedTier.monthlyMin;
           }
         } else {
-          // Use AI tool info as fallback
+          // Use AI tool info as fallback - parse pricing from context
+          const parsedPricing = parsePricingFromContext(aiTool.suggestedTier);
+          
           detailedTools.push({
             id: aiTool.id,
             name: aiTool.name,
             category: aiTool.category,
             description: aiTool.description,
             pricing: {
-              free: false,
-              monthlyMin: 15,
-              monthlyMax: 25,
-              usage: "Estimated",
+              free: parsedPricing.isFree,
+              monthlyMin: parsedPricing.monthlyMin,
+              monthlyMax: parsedPricing.monthlyMax,
+              usage: "AI Estimated",
               features: ["AI-identified tool"],
-              priceType: "usage-based"
+              priceType: parsedPricing.priceType,
+              pricingSource: "ai-estimated"
             },
             difficulty: 'Intermediate' as const,
             timeToImplement: "2-4 hours",
@@ -196,7 +289,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             mentioned: aiTool.mentioned,
             suggestedContext: aiTool.suggestedTier
           });
-          totalCost += 20;
+          
+          // Only add to total cost if not free
+          if (!parsedPricing.isFree) {
+            totalCost += parsedPricing.monthlyMin;
+          }
         }
       }
 
