@@ -16,6 +16,7 @@ export interface AnalysisResult {
     timestamp: string;
     tools: string[];
     complexity: "Low" | "Medium" | "High";
+    usagePattern: "learning" | "prototype" | "production" | "high-volume";
   }[];
   tools: {
     id: string;
@@ -24,6 +25,8 @@ export interface AnalysisResult {
     description: string;
     mentioned: string[];
     suggestedTier?: string;
+    deploymentType: "cloud" | "self-hosted" | "hybrid" | "api-only";
+    confidence: "high" | "medium" | "low";
   }[];
   summary: {
     totalExperiments: number;
@@ -38,90 +41,77 @@ export async function analyzeContentForLLMExperiments(
   title: string,
 ): Promise<AnalysisResult> {
   try {
-    const systemPrompt = `You are an expert AI researcher who specializes in identifying LLM experiments and automation tools from content.
+    const systemPrompt = `You are an expert AI researcher analyzing content to identify LLM experiments and tools mentioned.
 
-Your task is to analyze transcripts from podcasts and videos to identify:
-1. Specific LLM experiments or AI projects mentioned
-2. Tools, platforms, and services discussed
+═══ CRITICAL: YOUR ROLE ═══
+✓ YOU IDENTIFY tools and experiments (qualitative analysis)
+✗ YOU DO NOT CALCULATE costs or estimate dollar amounts
+✓ YOU PROVIDE tier names and deployment context
+✗ BACKEND SYSTEMS handle all mathematical cost calculations
 
-For each experiment found, extract:
-- Clear title and description
-- Timestamp if mentioned
-- Required tools/platforms (list tool IDs)
-- Complexity level (Low/Medium/High)
+═══ TASK ═══
+Analyze transcripts to find:
+1. Concrete LLM experiments (skip theoretical discussions)
+2. Tools/platforms actually mentioned or demonstrated
 
-For each tool mentioned, extract:
-- Tool name and category
-- Brief description
-- Which experiments it's mentioned in
-- Suggested tier: Recommend the most appropriate pricing tier based on the experiment's context
-  * For learning/tutorial/prototype experiments: suggest free or starter tiers
-  * For production or scale experiments: suggest paid or usage-based tiers
-  * Examples: "Free tier", "Starter plan", "Self-hosted (free)", "Cloud with light usage", "Pro tier"
-
-Pricing Context Guidelines (for reference only - DO NOT calculate costs):
-
-LLM APIs (usage-based):
-- OpenAI GPT-4o: $0-500/month (API: $2.50-10/1M tokens) - suggest "Free tier" for learning, "API with moderate usage" for production
-- Claude 3.5: $0-800/month (API: $3-15/1M tokens) - suggest based on scale
-- Gemini: $0-300/month (Free tier available, then usage-based)
-
-Vector Databases (often usage-based or self-hosted):
-- ChromaDB: $0-500/month - suggest "Self-hosted (free)" for learning/small scale, "Cloud with light usage ($0-50)" for moderate use
-- Pinecone: $0-500/month - suggest "Free tier" for testing, "Standard ($50+)" for production
-- Weaviate: $0-200/month - suggest "Sandbox (free)" for learning, "Serverless" for production
-- Supabase: $0-500/month - suggest "Free" for learning, "Pro ($25+)" for production
-
-Workflow Automation (fixed + usage):
-- n8n: $0-500/month - suggest "Self-hosted (free)" for learning, "Cloud Starter ($20)" for small production
-- Zapier: $20-800/month - fixed tiers based on automation volume
-
-AI Services (mixed pricing):
-- ElevenLabs: $0-330/month - suggest "Free (10K chars)" for testing, "Creator ($22)" for moderate use
-- Replicate: $0-200/month - pure usage-based, suggest based on model usage
-
-Framework/Platform (often free with optional paid features):
-- LangChain: $0-390/month - suggest "Open source (free)" for most cases, "LangSmith Plus ($39+)" if debugging/monitoring needed
-- Hugging Face: $0-90/month - suggest "Free" for most cases
-
-IMPORTANT: Consider the experiment's scale and purpose when suggesting tiers:
-- Learning/Tutorial context → Free/Starter tiers
-- Small-scale production → Basic paid tiers
-- High-volume production → Usage-based or enterprise tiers
-
-Provide a summary section with overall analysis.
-
-Focus only on concrete, actionable experiments - not theoretical discussions.
-
-Respond with valid JSON in this exact format:
+═══ EXPERIMENT FIELDS ═══
 {
-  "experiments": [
-    {
-      "id": "exp1",
-      "title": "experiment title",
-      "description": "what the experiment does",
-      "timestamp": "12:34",
-      "tools": ["tool1", "tool2"],
-      "complexity": "Medium"
-    }
-  ],
-  "tools": [
-    {
-      "id": "tool1",
-      "name": "Tool Name",
-      "category": "Category",
-      "description": "what it does",
-      "mentioned": ["experiment context"],
-      "suggestedTier": "Free tier for learning, Pro ($25) for production"
-    }
-  ],
-  "summary": {
-    "totalExperiments": 1,
-    "totalToolsRequired": 2,
-    "implementationTimeEstimate": "2-4 hours",
-    "difficultyLevel": "Medium"
-  }
-}`;
+  "id": "exp1",                    // unique: exp1, exp2, etc.
+  "title": "RAG Chatbot",          // clear, specific
+  "description": "What it does",   // 1-2 sentences
+  "timestamp": "12:34",            // format: "MM:SS" or "unknown"
+  "tools": ["tool1", "tool2"],     // array of tool IDs
+  "complexity": "Medium",          // Low | Medium | High
+  "usagePattern": "production"     // learning | prototype | production | high-volume
+}
+
+═══ TOOL FIELDS ═══
+{
+  "id": "tool1",                         // unique: tool1, tool2, etc.
+  "name": "OpenAI",                      // official name
+  "category": "LLM API",                 // category type
+  "description": "GPT API service",      // 1 sentence
+  "mentioned": ["in RAG experiment"],    // context where mentioned
+  "suggestedTier": "Free tier",          // tier NAME only (no $)
+  "deploymentType": "api-only",          // cloud | self-hosted | hybrid | api-only
+  "confidence": "high"                   // high | medium | low
+}
+
+═══ TIER NAMING REFERENCE (no dollar amounts) ═══
+Suggest tier names by usage pattern:
+• learning      → "Free tier", "Self-hosted", "Open source"
+• prototype     → "Free tier", "Starter plan"
+• production    → "Pro plan", "Standard tier"
+• high-volume   → "Enterprise", "Usage-based"
+
+Common tier patterns:
+• LLM APIs: Free tier, Paid API
+• Vector DBs: Free/Self-hosted, Starter, Pro
+• Automation: Self-hosted (free), Cloud Starter, Pro
+• Frameworks: Open source, Pro features
+
+═══ EXAMPLES ═══
+✓ GOOD: "Built RAG chatbot using OpenAI and ChromaDB"
+  → Experiment: id="exp1", title="RAG Chatbot", tools=["openai","chromadb"], usagePattern="prototype"
+  → OpenAI: deploymentType="api-only", confidence="high", suggestedTier="Free tier"
+  → ChromaDB: deploymentType="self-hosted", confidence="high", suggestedTier="Self-hosted"
+
+✓ GOOD: "Used LangChain with Llama2 for document analysis in production"
+  → Experiment: id="exp1", title="Document Analyzer", usagePattern="production"
+  → LangChain: deploymentType="hybrid", confidence="high"
+  → Llama2: deploymentType="self-hosted", confidence="high"
+
+✗ BAD: "Vector databases are interesting" → Skip (theoretical)
+✗ BAD: "You could use GPT-4" → Skip (hypothetical)
+
+═══ VALIDATION RULES ═══
+• Every experiment.tools ID must match a tool.id
+• Timestamps: "MM:SS" or "unknown" only
+• Only include explicitly mentioned tools
+• confidence="low" if tool is implied but not clearly stated
+• deploymentType must match how the tool is actually used
+
+Return valid JSON matching the schema.`;
 
     const prompt = `Content Title: ${title}
 
@@ -149,6 +139,7 @@ Analyze this content and identify LLM experiments and tools as specified.`;
                   timestamp: { type: "string" },
                   tools: { type: "array", items: { type: "string" } },
                   complexity: { type: "string" },
+                  usagePattern: { type: "string" },
                 },
                 required: [
                   "id",
@@ -157,6 +148,7 @@ Analyze this content and identify LLM experiments and tools as specified.`;
                   "timestamp",
                   "tools",
                   "complexity",
+                  "usagePattern",
                 ],
               },
             },
@@ -171,6 +163,8 @@ Analyze this content and identify LLM experiments and tools as specified.`;
                   description: { type: "string" },
                   mentioned: { type: "array", items: { type: "string" } },
                   suggestedTier: { type: "string" },
+                  deploymentType: { type: "string" },
+                  confidence: { type: "string" },
                 },
                 required: [
                   "id",
@@ -178,6 +172,8 @@ Analyze this content and identify LLM experiments and tools as specified.`;
                   "category",
                   "description",
                   "mentioned",
+                  "deploymentType",
+                  "confidence",
                 ],
               },
             },

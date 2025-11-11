@@ -8,7 +8,12 @@ import { z } from "zod";
 import { AnalysisError, createNoExperimentsError, createInvalidUrlError, createUnsupportedPlatformError } from "./errors";
 
 // Estimate infrastructure costs for self-hosted tools
-function estimateInfrastructureCosts(tools: Array<{ name: string; category: string; pricing: { free: boolean; monthlyMin?: number; priceType?: string; pricingSource?: string } }>): {
+function estimateInfrastructureCosts(tools: Array<{ 
+  name: string; 
+  category: string; 
+  pricing: { free: boolean; monthlyMin?: number; priceType?: string; pricingSource?: string };
+  deploymentType?: string;
+}>): {
   min: number;
   max: number;
   breakdown: Array<{
@@ -32,10 +37,17 @@ function estimateInfrastructureCosts(tools: Array<{ name: string; category: stri
   for (const tool of tools) {
     const nameLower = tool.name.toLowerCase();
     const categoryLower = tool.category.toLowerCase();
+    const deploymentType = tool.deploymentType || 'unknown';
     
-    // GPU-hosted LLMs (Llama2, Mistral, etc.)
-    if ((nameLower.includes('llama') || nameLower.includes('mistral') || nameLower.includes('falcon')) &&
-        (tool.pricing.free || tool.pricing.priceType === 'free')) {
+    // Skip if it's cloud or API-only (no infrastructure needed)
+    if (deploymentType === 'api-only' || deploymentType === 'cloud') {
+      continue;
+    }
+    
+    // GPU-hosted LLMs (Llama2, Mistral, etc.) - only for self-hosted
+    if ((deploymentType === 'self-hosted' || deploymentType === 'hybrid') &&
+        (nameLower.includes('llama') || nameLower.includes('mistral') || nameLower.includes('falcon') || 
+         categoryLower.includes('llm'))) {
       // Self-hosted LLM on GPU: $120-600/mo for cloud GPU
       const costMin = 120;
       const costMax = 600;
@@ -49,26 +61,25 @@ function estimateInfrastructureCosts(tools: Array<{ name: string; category: stri
         costMax
       });
     }
-    // Vector databases (ChromaDB, Pinecone, etc.) - self-hosted
-    else if (categoryLower.includes('vector') || categoryLower.includes('database')) {
-      if (tool.pricing.free && tool.pricing.monthlyMin === 0) {
-        // Self-hosted vector DB: $20-80/mo for compute + storage
-        const costMin = 20;
-        const costMax = 80;
-        min += costMin;
-        max += costMax;
-        breakdown.push({
-          toolName: tool.name,
-          component: 'Vector DB Hosting',
-          description: 'Compute and storage for self-hosted vector database',
-          costMin,
-          costMax
-        });
-      }
+    // Vector databases - self-hosted only
+    else if ((deploymentType === 'self-hosted' || deploymentType === 'hybrid') &&
+             (categoryLower.includes('vector') || categoryLower.includes('database'))) {
+      // Self-hosted vector DB: $20-80/mo for compute + storage
+      const costMin = 20;
+      const costMax = 80;
+      min += costMin;
+      max += costMax;
+      breakdown.push({
+        toolName: tool.name,
+        component: 'Vector DB Hosting',
+        description: 'Compute and storage for self-hosted vector database',
+        costMin,
+        costMax
+      });
     }
     // Automation/workflow tools - self-hosted
-    else if ((categoryLower.includes('automation') || categoryLower.includes('workflow')) &&
-             (tool.pricing.free || tool.pricing.priceType === 'free')) {
+    else if ((deploymentType === 'self-hosted' || deploymentType === 'hybrid') &&
+             (categoryLower.includes('automation') || categoryLower.includes('workflow'))) {
       // Self-hosted automation: $10-50/mo for compute
       const costMin = 10;
       const costMax = 50;
@@ -394,7 +405,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             timeToImplement: dbTool.avgImplementationTime,
             url: dbTool.baseUrl,
             mentioned: aiTool.mentioned,
-            suggestedContext: aiTool.suggestedTier
+            suggestedContext: aiTool.suggestedTier,
+            deploymentType: aiTool.deploymentType,
+            confidence: aiTool.confidence
           });
 
           if (selectedTier?.monthlyMin) {
@@ -422,7 +435,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             timeToImplement: "2-4 hours",
             url: `https://google.com/search?q=${encodeURIComponent(aiTool.name)}`,
             mentioned: aiTool.mentioned,
-            suggestedContext: aiTool.suggestedTier
+            suggestedContext: aiTool.suggestedTier,
+            deploymentType: aiTool.deploymentType,
+            confidence: aiTool.confidence
           });
           
           // Only add to total cost if not free
