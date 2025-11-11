@@ -75,6 +75,8 @@ export interface AnalysisData {
     overallCostRangeMax: number;
     implementationTimeEstimate: string;
     difficultyLevel: 'Low' | 'Medium' | 'High';
+    costClassification?: 'Free' | 'Low' | 'Medium' | 'High';
+    costClassificationLabel?: string;
   };
   processingTime: number;
 }
@@ -99,6 +101,16 @@ export default function AnalysisResults({ data, onNewAnalysis }: AnalysisResults
   const getComplexityColor = (complexity: string) => {
     switch (complexity) {
       case 'Low': return 'bg-emerald text-emerald-foreground';
+      case 'Medium': return 'bg-amber text-amber-foreground';
+      case 'High': return 'bg-destructive text-destructive-foreground';
+      default: return 'bg-secondary text-secondary-foreground';
+    }
+  };
+
+  const getCostClassificationColor = (classification?: string) => {
+    switch (classification) {
+      case 'Free': return 'bg-emerald text-emerald-foreground';
+      case 'Low': return 'bg-blue text-blue-foreground';
       case 'Medium': return 'bg-amber text-amber-foreground';
       case 'High': return 'bg-destructive text-destructive-foreground';
       default: return 'bg-secondary text-secondary-foreground';
@@ -299,11 +311,19 @@ Analyzed with Content Analyzer for LLM Experiments`;
               <div className="text-2xl font-bold text-foreground">{data.tools.length}</div>
               <div className="text-sm text-muted-foreground">Tools Identified</div>
             </div>
-            <div className="text-center p-4 bg-emerald/10 rounded-lg">
+            <div className="text-center p-4 bg-emerald/10 rounded-lg space-y-2">
               <div className="text-2xl font-bold text-emerald">
                 ${data.summary.overallCostRangeMin}-${data.summary.overallCostRangeMax}
               </div>
               <div className="text-sm text-muted-foreground">Est. Monthly Cost Range</div>
+              {data.summary.costClassification && (
+                <Badge 
+                  className={getCostClassificationColor(data.summary.costClassification)}
+                  data-testid={`badge-cost-${data.summary.costClassification.toLowerCase()}`}
+                >
+                  {data.summary.costClassificationLabel || data.summary.costClassification}
+                </Badge>
+              )}
             </div>
           </div>
         </CardContent>
