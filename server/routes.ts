@@ -7,6 +7,45 @@ import { insertAnalysisSchema } from "@shared/schema";
 import { z } from "zod";
 import { AnalysisError, createNoExperimentsError, createInvalidUrlError, createUnsupportedPlatformError } from "./errors";
 
+// Estimate infrastructure costs for self-hosted tools
+function estimateInfrastructureCosts(tools: Array<{ name: string; category: string; pricing: { free: boolean; monthlyMin?: number; priceType?: string; pricingSource?: string } }>): {
+  min: number;
+  max: number;
+} {
+  let min = 0;
+  let max = 0;
+
+  for (const tool of tools) {
+    const nameLower = tool.name.toLowerCase();
+    const categoryLower = tool.category.toLowerCase();
+    
+    // GPU-hosted LLMs (Llama2, Mistral, etc.)
+    if ((nameLower.includes('llama') || nameLower.includes('mistral') || nameLower.includes('falcon')) &&
+        (tool.pricing.free || tool.pricing.priceType === 'free')) {
+      // Self-hosted LLM on GPU: $120-600/mo for cloud GPU
+      min += 120;
+      max += 600;
+    }
+    // Vector databases (ChromaDB, Pinecone, etc.) - self-hosted
+    else if (categoryLower.includes('vector') || categoryLower.includes('database')) {
+      if (tool.pricing.free && tool.pricing.monthlyMin === 0) {
+        // Self-hosted vector DB: $20-80/mo for compute + storage
+        min += 20;
+        max += 80;
+      }
+    }
+    // Automation/workflow tools - self-hosted
+    else if ((categoryLower.includes('automation') || categoryLower.includes('workflow')) &&
+             (tool.pricing.free || tool.pricing.priceType === 'free')) {
+      // Self-hosted automation: $10-50/mo for compute
+      min += 10;
+      max += 50;
+    }
+  }
+
+  return { min, max };
+}
+
 // Classify overall cost into categories for quick user understanding
 function getCostClassification(
   overallCostMin: number, 
@@ -352,21 +391,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Use the summary from AI analysis instead of manual calculation
-      // The aiAnalysis.summary already contains the proper cost range calculations
+      // DETERMINISTIC COST CALCULATION (backend math, not AI estimates)
+      
+      // Build tool pricing map for quick lookup
+      const toolPricingMap = new Map();
+      for (const tool of detailedTools) {
+        toolPricingMap.set(tool.id, {
+          monthlyMin: tool.pricing.monthlyMin || 0,
+          monthlyMax: tool.pricing.monthlyMax || tool.pricing.monthlyMin || 0,
+          free: tool.pricing.free
+        });
+      }
+      
+      // Calculate costs for each experiment by summing required tools
+      const experimentsWithCosts = aiAnalysis.experiments.map(exp => {
+        let expCostMin = 0;
+        let expCostMax = 0;
+        
+        for (const toolId of exp.tools) {
+          const toolPrice = toolPricingMap.get(toolId);
+          if (toolPrice) {
+            expCostMin += toolPrice.monthlyMin;
+            expCostMax += toolPrice.monthlyMax;
+          }
+        }
+        
+        return {
+          ...exp,
+          estimatedCostMin: expCostMin,
+          estimatedCostMax: expCostMax
+        };
+      });
+      
+      // Calculate tool subscription costs (sum across all unique tools)
+      let toolSubscriptionMin = 0;
+      let toolSubscriptionMax = 0;
+      
+      for (const tool of detailedTools) {
+        toolSubscriptionMin += tool.pricing.monthlyMin || 0;
+        toolSubscriptionMax += tool.pricing.monthlyMax || tool.pricing.monthlyMin || 0;
+      }
+      
+      // Estimate infrastructure costs for self-hosted tools
+      const infrastructureCosts = estimateInfrastructureCosts(detailedTools);
+      
+      // Calculate total costs
+      const totalCostMin = toolSubscriptionMin + infrastructureCosts.min;
+      const totalCostMax = toolSubscriptionMax + infrastructureCosts.max;
       
       // Determine if any tool has a free option
       const hasFreeToolOption = detailedTools.some(tool => tool.pricing.free);
       
-      // Add cost classification to the summary
+      // Add cost classification based on total cost
       const costClassification = getCostClassification(
-        aiAnalysis.summary.overallCostRangeMin,
-        aiAnalysis.summary.overallCostRangeMax,
+        totalCostMin,
+        totalCostMax,
         hasFreeToolOption
       );
       
       const enhancedSummary = {
         ...aiAnalysis.summary,
+        toolSubscriptionCostMin: toolSubscriptionMin,
+        toolSubscriptionCostMax: toolSubscriptionMax,
+        infrastructureCostMin: infrastructureCosts.min,
+        infrastructureCostMax: infrastructureCosts.max,
+        totalCostMin,
+        totalCostMax,
         costClassification: costClassification.class,
         costClassificationLabel: costClassification.label
       };
@@ -380,7 +470,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         platform: contentInfo.platform,
         duration: contentInfo.duration,
         transcript: contentInfo.transcript,
-        experiments: aiAnalysis.experiments,
+        experiments: experimentsWithCosts,
         tools: detailedTools,
         summary: enhancedSummary,
         processingTime
@@ -397,7 +487,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           platform: contentInfo.platform,
           url
         },
-        experiments: aiAnalysis.experiments,
+        experiments: experimentsWithCosts,
         tools: detailedTools,
         summary: enhancedSummary,
         processingTime
