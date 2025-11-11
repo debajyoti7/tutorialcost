@@ -15,8 +15,6 @@ export interface AnalysisResult {
     description: string;
     timestamp: string;
     tools: string[];
-    estimatedCostMin: number;
-    estimatedCostMax: number;
     complexity: "Low" | "Medium" | "High";
   }[];
   tools: {
@@ -30,8 +28,6 @@ export interface AnalysisResult {
   summary: {
     totalExperiments: number;
     totalToolsRequired: number;
-    overallCostRangeMin: number;
-    overallCostRangeMax: number;
     implementationTimeEstimate: string;
     difficultyLevel: "Low" | "Medium" | "High";
   };
@@ -47,13 +43,11 @@ export async function analyzeContentForLLMExperiments(
 Your task is to analyze transcripts from podcasts and videos to identify:
 1. Specific LLM experiments or AI projects mentioned
 2. Tools, platforms, and services discussed
-3. Realistic cost RANGES for implementing similar experiments (based on actual 2025 pricing)
 
 For each experiment found, extract:
 - Clear title and description
 - Timestamp if mentioned
-- Required tools/platforms
-- Realistic monthly cost range (minimum and maximum) considering different usage levels
+- Required tools/platforms (list tool IDs)
 - Complexity level (Low/Medium/High)
 
 For each tool mentioned, extract:
@@ -63,9 +57,9 @@ For each tool mentioned, extract:
 - Suggested tier: Recommend the most appropriate pricing tier based on the experiment's context
   * For learning/tutorial/prototype experiments: suggest free or starter tiers
   * For production or scale experiments: suggest paid or usage-based tiers
-  * Examples: "Free tier", "Starter plan", "Self-hosted", "Cloud with light usage", "Pro tier"
+  * Examples: "Free tier", "Starter plan", "Self-hosted (free)", "Cloud with light usage", "Pro tier"
 
-Cost Guidelines (use actual 2025 pricing with tier context):
+Pricing Context Guidelines (for reference only - DO NOT calculate costs):
 
 LLM APIs (usage-based):
 - OpenAI GPT-4o: $0-500/month (API: $2.50-10/1M tokens) - suggest "Free tier" for learning, "API with moderate usage" for production
@@ -108,8 +102,6 @@ Respond with valid JSON in this exact format:
       "description": "what the experiment does",
       "timestamp": "12:34",
       "tools": ["tool1", "tool2"],
-      "estimatedCostMin": 25,
-      "estimatedCostMax": 150,
       "complexity": "Medium"
     }
   ],
@@ -126,8 +118,6 @@ Respond with valid JSON in this exact format:
   "summary": {
     "totalExperiments": 1,
     "totalToolsRequired": 2,
-    "overallCostRangeMin": 25,
-    "overallCostRangeMax": 150,
     "implementationTimeEstimate": "2-4 hours",
     "difficultyLevel": "Medium"
   }
@@ -158,8 +148,6 @@ Analyze this content and identify LLM experiments and tools as specified.`;
                   description: { type: "string" },
                   timestamp: { type: "string" },
                   tools: { type: "array", items: { type: "string" } },
-                  estimatedCostMin: { type: "number" },
-                  estimatedCostMax: { type: "number" },
                   complexity: { type: "string" },
                 },
                 required: [
@@ -168,8 +156,6 @@ Analyze this content and identify LLM experiments and tools as specified.`;
                   "description",
                   "timestamp",
                   "tools",
-                  "estimatedCostMin",
-                  "estimatedCostMax",
                   "complexity",
                 ],
               },
@@ -200,16 +186,12 @@ Analyze this content and identify LLM experiments and tools as specified.`;
               properties: {
                 totalExperiments: { type: "number" },
                 totalToolsRequired: { type: "number" },
-                overallCostRangeMin: { type: "number" },
-                overallCostRangeMax: { type: "number" },
                 implementationTimeEstimate: { type: "string" },
                 difficultyLevel: { type: "string" },
               },
               required: [
                 "totalExperiments",
                 "totalToolsRequired",
-                "overallCostRangeMin",
-                "overallCostRangeMax",
                 "implementationTimeEstimate",
                 "difficultyLevel",
               ],
