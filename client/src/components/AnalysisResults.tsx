@@ -110,7 +110,7 @@ export default function AnalysisResults({ data, onNewAnalysis }: AnalysisResults
   const getCostClassificationColor = (classification?: string) => {
     switch (classification) {
       case 'Free': return 'bg-emerald text-emerald-foreground';
-      case 'Low': return 'bg-blue text-blue-foreground';
+      case 'Low': return 'bg-primary text-primary-foreground';
       case 'Medium': return 'bg-amber text-amber-foreground';
       case 'High': return 'bg-destructive text-destructive-foreground';
       default: return 'bg-secondary text-secondary-foreground';
