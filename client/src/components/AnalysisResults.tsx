@@ -32,6 +32,7 @@ export interface Tool {
     features: string[];
     priceType?: 'fixed' | 'usage-based' | 'per-token' | 'free';
     tierName?: string;
+    pricingSource?: 'database' | 'ai-estimated';
     allTiers?: {
       tier: string;
       monthlyMin: number;
@@ -384,26 +385,53 @@ Analyzed with Content Analyzer for LLM Experiments`;
                       </div>
                     </div>
                     <div className="text-right space-y-1">
-                      {tool.pricing.priceType === 'free' || (tool.pricing.free && tool.pricing.monthlyMin === 0) ? (
+                      {/* Two-line pricing hierarchy: free tier first, optional paid second */}
+                      {tool.pricing.free ? (
                         <div className="space-y-1">
-                          <Badge variant="secondary" className="bg-emerald text-emerald-foreground">
-                            Free
-                          </Badge>
+                          {/* Primary line: Free tier headline */}
+                          <div className="flex items-center justify-end gap-2">
+                            <Badge variant="secondary" className="bg-emerald text-emerald-foreground">
+                              Free
+                            </Badge>
+                            {tool.pricing.pricingSource === 'ai-estimated' && (
+                              <Badge variant="outline" className="text-xs" title="Pricing estimated via AI analysis">
+                                AI Estimated
+                              </Badge>
+                            )}
+                          </div>
                           {tool.pricing.tierName && (
                             <div className="text-xs text-muted-foreground">
                               {tool.pricing.tierName}
                             </div>
                           )}
+                          
+                          {/* Secondary line: Optional paid tier if available */}
+                          {tool.pricing.monthlyMin && tool.pricing.monthlyMin > 0 && (
+                            <div className="text-xs text-muted-foreground mt-1">
+                              Optional: {tool.pricing.monthlyMax 
+                                ? `$${tool.pricing.monthlyMin}-${tool.pricing.monthlyMax}/mo` 
+                                : `$${tool.pricing.monthlyMin}+/mo`}
+                              {tool.pricing.priceType === 'usage-based' && ' (usage-based)'}
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <div className="text-right space-y-1">
-                          <div className="font-semibold text-foreground">
-                            {tool.pricing.monthlyMin && tool.pricing.monthlyMax ? (
-                              `$${tool.pricing.monthlyMin}-${tool.pricing.monthlyMax}/mo`
-                            ) : tool.pricing.monthlyMin ? (
-                              `$${tool.pricing.monthlyMin}+/mo`
-                            ) : (
-                              'Contact for pricing'
+                          {/* Paid tier headline */}
+                          <div className="flex items-center justify-end gap-2">
+                            <div className="font-semibold text-foreground">
+                              {tool.pricing.monthlyMin && tool.pricing.monthlyMax ? (
+                                `$${tool.pricing.monthlyMin}-${tool.pricing.monthlyMax}/mo`
+                              ) : tool.pricing.monthlyMin ? (
+                                `$${tool.pricing.monthlyMin}+/mo`
+                              ) : (
+                                'Contact for pricing'
+                              )}
+                            </div>
+                            {tool.pricing.pricingSource === 'ai-estimated' && (
+                              <Badge variant="outline" className="text-xs" title="Pricing estimated via AI analysis">
+                                AI Estimated
+                              </Badge>
                             )}
                           </div>
                           {tool.pricing.tierName && (
@@ -450,10 +478,16 @@ Analyzed with Content Analyzer for LLM Experiments`;
                       </ul>
                     </div>
 
-                    {tool.suggestedContext && (
+                    {tool.suggestedContext && tool.pricing.pricingSource === 'ai-estimated' && (
                       <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border-l-2 border-blue-500">
-                        <h4 className="text-sm font-medium text-foreground mb-1">Pricing Context:</h4>
+                        <div className="flex items-center gap-2 mb-1">
+                          <AlertCircle className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                          <h4 className="text-sm font-medium text-foreground">AI Pricing Estimate:</h4>
+                        </div>
                         <p className="text-xs text-muted-foreground">{tool.suggestedContext}</p>
+                        <p className="text-xs text-muted-foreground mt-1 italic">
+                          This pricing is estimated from AI analysis. Verify on the official website.
+                        </p>
                       </div>
                     )}
 
