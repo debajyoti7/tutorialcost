@@ -5,6 +5,7 @@ import { extractYouTubeContent, extractPodcastContent, detectPlatform, validateU
 import { analyzeContentForLLMExperiments } from "./gemini";
 import { insertAnalysisSchema } from "@shared/schema";
 import { z } from "zod";
+import { AnalysisError, createNoExperimentsError } from "./errors";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Validation schemas
@@ -73,6 +74,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
 
       console.log(`AI analysis found ${aiAnalysis.experiments.length} experiments and ${aiAnalysis.tools.length} tools`);
+
+      // Check if no experiments were found
+      if (aiAnalysis.experiments.length === 0 && aiAnalysis.tools.length === 0) {
+        throw createNoExperimentsError();
+      }
 
       // Get detailed tool information from our database
       const allTools = await storage.getAllTools();
@@ -223,14 +229,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Analysis failed:', error);
       const processingTime = Math.round((Date.now() - startTime) / 1000);
       
-      // Return 400 for client errors (like no transcript available)
-      const statusCode = error instanceof Error && 
-        (error.message.includes('transcript available') || 
-         error.message.includes('not yet supported') ||
-         error.message.includes('Invalid URL')) ? 400 : 500;
+      // Handle structured errors
+      if (error instanceof AnalysisError) {
+        return res.status(error.statusCode).json({ 
+          type: error.type,
+          message: error.message,
+          details: error.details,
+          processingTime
+        });
+      }
       
-      res.status(statusCode).json({ 
-        error: error instanceof Error ? error.message : 'Analysis failed',
+      // Handle Zod validation errors
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          type: 'invalid-url',
+          message: 'Invalid request parameters',
+          details: error.errors.map(e => e.message).join(', '),
+          processingTime
+        });
+      }
+      
+      // Generic error fallback
+      res.status(500).json({ 
+        type: 'generic',
+        message: error instanceof Error ? error.message : 'Analysis failed',
+        details: 'An unexpected error occurred. Please try again.',
         processingTime
       });
     }

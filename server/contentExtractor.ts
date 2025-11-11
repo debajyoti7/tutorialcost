@@ -1,6 +1,13 @@
 import { YoutubeTranscript } from 'youtube-transcript';
 import fetch from 'node-fetch';
 import { google } from 'googleapis';
+import { 
+  createTranscriptDisabledError, 
+  createInvalidUrlError, 
+  createEmptyContentError, 
+  createUnsupportedPlatformError,
+  createNetworkError 
+} from './errors';
 
 export interface ContentInfo {
   title: string;
@@ -26,7 +33,7 @@ export async function extractYouTubeContent(url: string): Promise<ContentInfo> {
     // First, get video metadata using YouTube Data API
     const videoId = extractVideoId(url);
     if (!videoId) {
-      throw new Error('Invalid YouTube URL - could not extract video ID');
+      throw createInvalidUrlError('YouTube');
     }
 
     try {
@@ -88,7 +95,7 @@ export async function extractYouTubeContent(url: string): Promise<ContentInfo> {
     
     // Check if we have either transcript or meaningful description
     if ((!transcriptItems || transcriptItems.length === 0) && !hasDescription) {
-      throw new Error('No transcript or meaningful description available for this video');
+      throw createTranscriptDisabledError();
     }
 
     // Combine available content
@@ -125,7 +132,7 @@ export async function extractYouTubeContent(url: string): Promise<ContentInfo> {
     }
 
     if (transcript.length < 50) {
-      throw new Error('Content too short to analyze meaningfully');
+      throw createEmptyContentError();
     }
 
     return {
@@ -146,17 +153,17 @@ export async function extractYouTubeContent(url: string): Promise<ContentInfo> {
       error.message.includes('Transcript is disabled') ||
       error.message.includes('transcript could not be retrieved')
     )) {
-      throw new Error('This YouTube video doesn\'t have a transcript or sufficient description available for analysis. Please try a different video. Videos with transcripts or detailed descriptions work best - these are usually educational content, tutorials, tech talks, or videos with auto-generated captions enabled.');
+      throw createTranscriptDisabledError();
     }
     
-    throw new Error(`Failed to extract YouTube content: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw createNetworkError(error instanceof Error ? error : undefined);
   }
 }
 
 export async function extractPodcastContent(url: string): Promise<ContentInfo> {
   // Podcast extraction not yet implemented
   // In production, you'd integrate with podcast platforms or RSS parsing
-  throw new Error('Podcast content analysis is not yet supported. Please use YouTube video URLs instead. We support all YouTube video formats including educational content, podcasts uploaded to YouTube, and technical discussions.');
+  throw createUnsupportedPlatformError();
 }
 
 function extractVideoId(url: string): string | null {
