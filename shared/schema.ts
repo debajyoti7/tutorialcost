@@ -41,10 +41,16 @@ export const analyses = pgTable("analyses", {
   summary: jsonb("summary").notNull().$type<{
     totalExperiments: number;
     totalToolsRequired: number;
-    overallCostRangeMin: number;
-    overallCostRangeMax: number;
+    toolSubscriptionCostMin: number;
+    toolSubscriptionCostMax: number;
+    infrastructureCostMin: number;
+    infrastructureCostMax: number;
+    totalCostMin: number;
+    totalCostMax: number;
     implementationTimeEstimate: string;
     difficultyLevel: 'Low' | 'Medium' | 'High';
+    costClassification?: 'Free' | 'Low' | 'Medium' | 'High';
+    costClassificationLabel?: string;
   }>(),
   processingTime: integer("processing_time").notNull(), // in seconds
   createdAt: timestamp("created_at").defaultNow().notNull(),

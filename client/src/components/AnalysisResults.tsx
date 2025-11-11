@@ -71,8 +71,12 @@ export interface AnalysisData {
   summary: {
     totalExperiments: number;
     totalToolsRequired: number;
-    overallCostRangeMin: number;
-    overallCostRangeMax: number;
+    toolSubscriptionCostMin: number;
+    toolSubscriptionCostMax: number;
+    infrastructureCostMin: number;
+    infrastructureCostMax: number;
+    totalCostMin: number;
+    totalCostMax: number;
     implementationTimeEstimate: string;
     difficultyLevel: 'Low' | 'Medium' | 'High';
     costClassification?: 'Free' | 'Low' | 'Medium' | 'High';
@@ -125,8 +129,12 @@ export default function AnalysisResults({ data, onNewAnalysis }: AnalysisResults
         summary: {
           experimentsCount: data.experiments.length,
           toolsCount: data.tools.length,
-          totalEstimatedCostMin: data.summary.overallCostRangeMin,
-          totalEstimatedCostMax: data.summary.overallCostRangeMax,
+          toolSubscriptionCostMin: data.summary.toolSubscriptionCostMin,
+          toolSubscriptionCostMax: data.summary.toolSubscriptionCostMax,
+          infrastructureCostMin: data.summary.infrastructureCostMin,
+          infrastructureCostMax: data.summary.infrastructureCostMax,
+          totalEstimatedCostMin: data.summary.totalCostMin,
+          totalEstimatedCostMax: data.summary.totalCostMax,
           processingTime: data.processingTime
         }
       };
@@ -164,7 +172,9 @@ export default function AnalysisResults({ data, onNewAnalysis }: AnalysisResults
       csvContent += `Platform,${data.contentInfo.platform}\n`;
       csvContent += `Duration,${data.contentInfo.duration}\n`;
       csvContent += `Processing Time,${data.processingTime}s\n`;
-      csvContent += `Total Estimated Cost Range,$${data.summary.overallCostRangeMin}-$${data.summary.overallCostRangeMax}\n\n`;
+      csvContent += `Tool Subscription Costs,$${data.summary.toolSubscriptionCostMin}-$${data.summary.toolSubscriptionCostMax}\n`;
+      csvContent += `Infrastructure Costs,$${data.summary.infrastructureCostMin}-$${data.summary.infrastructureCostMax}\n`;
+      csvContent += `Total Estimated Cost Range,$${data.summary.totalCostMin}-$${data.summary.totalCostMax}\n\n`;
       
       // Experiments section
       csvContent += "Experiments\n";
@@ -212,7 +222,7 @@ export default function AnalysisResults({ data, onNewAnalysis }: AnalysisResults
     try {
       const shareText = `Content Analysis Results: ${data.contentInfo.title}
       
-Found ${data.experiments.length} LLM experiments and ${data.tools.length} tools with an estimated cost range of $${data.summary.overallCostRangeMin}-$${data.summary.overallCostRangeMax}/month.
+Found ${data.experiments.length} LLM experiments and ${data.tools.length} tools with an estimated total cost of $${data.summary.totalCostMin}-$${data.summary.totalCostMax}/month (Tools: $${data.summary.toolSubscriptionCostMin}-$${data.summary.toolSubscriptionCostMax}, Infrastructure: $${data.summary.infrastructureCostMin}-$${data.summary.infrastructureCostMax}).
 
 Experiments:
 ${data.experiments.map(exp => `• ${exp.title} (${exp.complexity} complexity)`).join('\n')}
@@ -313,9 +323,15 @@ Analyzed with Content Analyzer for LLM Experiments`;
             </div>
             <div className="text-center p-4 bg-emerald/10 rounded-lg space-y-2">
               <div className="text-2xl font-bold text-emerald">
-                ${data.summary.overallCostRangeMin}-${data.summary.overallCostRangeMax}
+                ${data.summary.totalCostMin}-${data.summary.totalCostMax}
               </div>
               <div className="text-sm text-muted-foreground">Est. Monthly Cost Range</div>
+              <div className="text-xs text-muted-foreground/80 space-y-0.5">
+                <div>Tools: ${data.summary.toolSubscriptionCostMin}-${data.summary.toolSubscriptionCostMax}</div>
+                {(data.summary.infrastructureCostMin > 0 || data.summary.infrastructureCostMax > 0) && (
+                  <div>Infrastructure: ${data.summary.infrastructureCostMin}-${data.summary.infrastructureCostMax}</div>
+                )}
+              </div>
               {data.summary.costClassification && (
                 <Badge 
                   className={getCostClassificationColor(data.summary.costClassification)}
