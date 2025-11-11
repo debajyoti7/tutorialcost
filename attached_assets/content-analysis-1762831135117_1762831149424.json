@@ -1,0 +1,201 @@
+{
+  "contentInfo": {
+    "title": "Building a RAG application using open-source models (Asking questions from a PDF using Llama2)",
+    "duration": "0:00",
+    "platform": "YouTube",
+    "url": "https://youtu.be/HRvyei7vFSM?si=WWhWd79LuhyglnP_ "
+  },
+  "experiments": [
+    {
+      "id": "exp1",
+      "title": "Building a RAG application using open-source models (Asking questions from a PDF using Llama2)",
+      "description": "This experiment focuses on developing a Retrieval-Augmented Generation (RAG) system to enable natural language querying of PDF documents. It specifically leverages open-source models like Llama2 for generation, combined with vector embeddings and a vector database for efficient information retrieval from the PDF content.",
+      "timestamp": "N/A",
+      "tools": [
+        "llama2",
+        "chromadb",
+        "langchain",
+        "pdf_loader_library",
+        "github"
+      ],
+      "estimatedCostMin": 10,
+      "estimatedCostMax": 150,
+      "complexity": "Medium"
+    }
+  ],
+  "tools": [
+    {
+      "id": "llama2",
+      "name": "Llama2",
+      "category": "Large Language Model (LLM)",
+      "description": "An open-source large language model developed by Meta, used as the core generation component in the RAG application to answer questions based on retrieved document chunks.",
+      "pricing": {
+        "free": true,
+        "monthlyMin": 10,
+        "monthlyMax": 50,
+        "usage": "AI Estimated",
+        "features": [
+          "AI-identified tool"
+        ],
+        "priceType": "fixed",
+        "pricingSource": "ai-estimated"
+      },
+      "difficulty": "Intermediate",
+      "timeToImplement": "2-4 hours",
+      "url": "https://google.com/search?q=Llama2",
+      "mentioned": [
+        "Building a RAG application using open-source models (Asking questions from a PDF using Llama2)"
+      ],
+      "suggestedContext": "Replicate (usage-based, $10-50/month for prototyping); Self-hosted on cloud GPU (e.g., AWS EC2, $70-360/month) for production"
+    },
+    {
+      "id": "chromadb",
+      "name": "ChromaDB",
+      "category": "Vector Database",
+      "description": "Open-source embedding database for LLM applications",
+      "pricing": {
+        "free": true,
+        "monthlyMin": 0,
+        "monthlyMax": 0,
+        "usage": "Free to self-host, infrastructure costs only",
+        "features": [
+          "Open source",
+          "Self-hosted",
+          "Full features",
+          "Community support"
+        ],
+        "priceType": "free",
+        "tierName": "Self-hosted (Free)",
+        "pricingSource": "database",
+        "allTiers": [
+          {
+            "tier": "Self-hosted (Free)",
+            "monthlyMin": 0,
+            "monthlyMax": 0,
+            "priceType": "free",
+            "usage": "Free to self-host, infrastructure costs only"
+          },
+          {
+            "tier": "Cloud (Light usage)",
+            "monthlyMin": 0,
+            "monthlyMax": 50,
+            "priceType": "usage-based",
+            "usage": "Pay for storage and queries"
+          },
+          {
+            "tier": "Cloud (Production)",
+            "monthlyMin": 50,
+            "monthlyMax": 500,
+            "priceType": "usage-based",
+            "usage": "Based on data volume and throughput"
+          }
+        ]
+      },
+      "difficulty": "Beginner",
+      "timeToImplement": "1-3 hours",
+      "url": "https://www.trychroma.com",
+      "mentioned": [
+        "Building a RAG application using open-source models (Asking questions from a PDF using Llama2)"
+      ],
+      "suggestedContext": "Self-hosted (free) for learning/small scale; Cloud with light usage ($0-50/month) if using a managed service"
+    },
+    {
+      "id": "langchain",
+      "name": "LangChain",
+      "category": "AI Framework",
+      "description": "Framework for developing applications with language models",
+      "pricing": {
+        "free": true,
+        "monthlyMin": 0,
+        "monthlyMax": 0,
+        "usage": "Free to use",
+        "features": [
+          "Core framework",
+          "Community support",
+          "Basic integrations"
+        ],
+        "priceType": "free",
+        "tierName": "Open Source",
+        "pricingSource": "database",
+        "allTiers": [
+          {
+            "tier": "Open Source",
+            "monthlyMin": 0,
+            "monthlyMax": 0,
+            "priceType": "free",
+            "usage": "Free to use"
+          },
+          {
+            "tier": "LangSmith Plus",
+            "monthlyMin": 39,
+            "monthlyMax": 390,
+            "priceType": "usage-based",
+            "usage": "$39/user/month + usage fees"
+          }
+        ]
+      },
+      "difficulty": "Intermediate",
+      "timeToImplement": "4-6 hours",
+      "url": "https://langchain.com",
+      "mentioned": [
+        "Building a RAG application using open-source models (Asking questions from a PDF using Llama2)"
+      ],
+      "suggestedContext": "Open source (free)"
+    },
+    {
+      "id": "pdf_loader_library",
+      "name": "PDF Loader Library (e.g., unstructured.io, PyPDF2)",
+      "category": "Data Processing Library",
+      "description": "A library or tool used to extract text and potentially other structured data from PDF documents, preparing the content for further processing, chunking, and embedding.",
+      "pricing": {
+        "free": true,
+        "monthlyMin": 0,
+        "usage": "AI Estimated",
+        "features": [
+          "AI-identified tool"
+        ],
+        "priceType": "free",
+        "pricingSource": "ai-estimated"
+      },
+      "difficulty": "Intermediate",
+      "timeToImplement": "2-4 hours",
+      "url": "https://google.com/search?q=PDF%20Loader%20Library%20(e.g.%2C%20unstructured.io%2C%20PyPDF2)",
+      "mentioned": [
+        "Building a RAG application using open-source models (Asking questions from a PDF using Llama2)"
+      ],
+      "suggestedContext": "Open-source (free)"
+    },
+    {
+      "id": "github",
+      "name": "GitHub",
+      "category": "Version Control/Code Hosting",
+      "description": "A platform for hosting Git repositories, enabling version control and collaborative development of the RAG application. The provided content points to a GitHub repository for this project.",
+      "pricing": {
+        "free": true,
+        "monthlyMin": 0,
+        "usage": "AI Estimated",
+        "features": [
+          "AI-identified tool"
+        ],
+        "priceType": "free",
+        "pricingSource": "ai-estimated"
+      },
+      "difficulty": "Intermediate",
+      "timeToImplement": "2-4 hours",
+      "url": "https://google.com/search?q=GitHub",
+      "mentioned": [
+        "Building a RAG application using open-source models (Asking questions from a PDF using Llama2)"
+      ],
+      "suggestedContext": "Free tier"
+    }
+  ],
+  "summary": {
+    "experimentsCount": 1,
+    "toolsCount": 5,
+    "totalEstimatedCostMin": 10,
+    "totalEstimatedCostMax": 150,
+    "processingTime": 21
+  },
+  "processingTime": 21,
+  "exportedAt": "2025-11-11T03:18:55.116Z"
+}
