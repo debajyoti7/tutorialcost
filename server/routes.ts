@@ -247,6 +247,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               features: selectedTier?.features || [],
               priceType: selectedTier?.priceType,
               tierName: selectedTier?.tier,
+              pricingSource: "database",
               allTiers: dbTool.pricingTiers.map(tier => ({
                 tier: tier.tier,
                 monthlyMin: tier.monthlyMin,
