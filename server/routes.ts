@@ -56,17 +56,36 @@ function parsePricingFromContext(suggestedContext?: string): {
         const minCost = parseFloat(costMatch[1]);
         const maxCost = costMatch[2] ? parseFloat(costMatch[2]) : undefined;
         
-        // Convert hourly to monthly if needed (assume ~100 hrs/month for moderate usage)
-        const isHourly = contextLower.includes('/hr') || contextLower.includes('per hour');
-        const multiplier = isHourly ? 100 : 1;
-        
-        // Skip if the extracted price is actually $0.XX
-        if (minCost < 1 && isHourly) {
+        // Skip if this matched the "$0" we already identified as free
+        if (minCost === 0) {
+          // Look for the next price range
+          const allCostMatches = [...contextLower.matchAll(/\$(\d+(?:\.\d+)?)\s*-?\s*(\d+(?:\.\d+)?)?/g)];
+          const nonZeroMatch = allCostMatches.find(match => parseFloat(match[1]) > 0);
+          
+          if (nonZeroMatch) {
+            const paidMin = parseFloat(nonZeroMatch[1]);
+            const paidMax = nonZeroMatch[2] ? parseFloat(nonZeroMatch[2]) : undefined;
+            
+            const isHourly = contextLower.includes('/hr') || contextLower.includes('per hour');
+            const multiplier = isHourly ? 100 : 1;
+            
+            return {
+              isFree: true,
+              monthlyMin: Math.round(paidMin * multiplier),
+              monthlyMax: paidMax ? Math.round(paidMax * multiplier) : undefined,
+              priceType: isHourly ? "usage-based" : "fixed"
+            };
+          }
+        } else {
+          // We have a non-zero price
+          const isHourly = contextLower.includes('/hr') || contextLower.includes('per hour');
+          const multiplier = isHourly ? 100 : 1;
+          
           return {
             isFree: true, // Has free option, showing optional cloud cost
             monthlyMin: Math.round(minCost * multiplier),
             monthlyMax: maxCost ? Math.round(maxCost * multiplier) : undefined,
-            priceType: "usage-based"
+            priceType: isHourly ? "usage-based" : "fixed"
           };
         }
       }
