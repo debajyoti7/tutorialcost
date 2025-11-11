@@ -75,6 +75,13 @@ export interface AnalysisData {
     toolSubscriptionCostMax: number;
     infrastructureCostMin: number;
     infrastructureCostMax: number;
+    infrastructureBreakdown: Array<{
+      toolName: string;
+      component: string;
+      description: string;
+      costMin: number;
+      costMax: number;
+    }>;
     totalCostMin: number;
     totalCostMax: number;
     implementationTimeEstimate: string;
@@ -578,6 +585,38 @@ Analyzed with Content Analyzer for LLM Experiments`;
           </div>
         </div>
       </div>
+
+      {/* Infrastructure Costs Section */}
+      {data.summary.infrastructureBreakdown && data.summary.infrastructureBreakdown.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
+            <DollarSign className="w-5 h-5 text-emerald" />
+            Infrastructure Costs
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {data.summary.infrastructureBreakdown.map((infra, index) => (
+              <Card key={index} className="hover-elevate">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <CardTitle className="text-base">{infra.toolName}</CardTitle>
+                      <Badge variant="outline" className="text-xs">{infra.component}</Badge>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-semibold text-emerald">
+                        ${infra.costMin}-${infra.costMax}/mo
+                      </div>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">{infra.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Pricing Disclaimer */}
       <Card className="bg-muted/30">

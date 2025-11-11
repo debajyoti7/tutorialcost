@@ -11,9 +11,23 @@ import { AnalysisError, createNoExperimentsError, createInvalidUrlError, createU
 function estimateInfrastructureCosts(tools: Array<{ name: string; category: string; pricing: { free: boolean; monthlyMin?: number; priceType?: string; pricingSource?: string } }>): {
   min: number;
   max: number;
+  breakdown: Array<{
+    toolName: string;
+    component: string;
+    description: string;
+    costMin: number;
+    costMax: number;
+  }>;
 } {
   let min = 0;
   let max = 0;
+  const breakdown: Array<{
+    toolName: string;
+    component: string;
+    description: string;
+    costMin: number;
+    costMax: number;
+  }> = [];
 
   for (const tool of tools) {
     const nameLower = tool.name.toLowerCase();
@@ -23,27 +37,54 @@ function estimateInfrastructureCosts(tools: Array<{ name: string; category: stri
     if ((nameLower.includes('llama') || nameLower.includes('mistral') || nameLower.includes('falcon')) &&
         (tool.pricing.free || tool.pricing.priceType === 'free')) {
       // Self-hosted LLM on GPU: $120-600/mo for cloud GPU
-      min += 120;
-      max += 600;
+      const costMin = 120;
+      const costMax = 600;
+      min += costMin;
+      max += costMax;
+      breakdown.push({
+        toolName: tool.name,
+        component: 'GPU Compute',
+        description: 'Cloud GPU instance for hosting self-hosted LLM (e.g., AWS g4dn.xlarge or equivalent)',
+        costMin,
+        costMax
+      });
     }
     // Vector databases (ChromaDB, Pinecone, etc.) - self-hosted
     else if (categoryLower.includes('vector') || categoryLower.includes('database')) {
       if (tool.pricing.free && tool.pricing.monthlyMin === 0) {
         // Self-hosted vector DB: $20-80/mo for compute + storage
-        min += 20;
-        max += 80;
+        const costMin = 20;
+        const costMax = 80;
+        min += costMin;
+        max += costMax;
+        breakdown.push({
+          toolName: tool.name,
+          component: 'Vector DB Hosting',
+          description: 'Compute and storage for self-hosted vector database',
+          costMin,
+          costMax
+        });
       }
     }
     // Automation/workflow tools - self-hosted
     else if ((categoryLower.includes('automation') || categoryLower.includes('workflow')) &&
              (tool.pricing.free || tool.pricing.priceType === 'free')) {
       // Self-hosted automation: $10-50/mo for compute
-      min += 10;
-      max += 50;
+      const costMin = 10;
+      const costMax = 50;
+      min += costMin;
+      max += costMax;
+      breakdown.push({
+        toolName: tool.name,
+        component: 'Automation Server',
+        description: 'Server instance for self-hosted automation/workflow tool',
+        costMin,
+        costMax
+      });
     }
   }
 
-  return { min, max };
+  return { min, max, breakdown };
 }
 
 // Classify overall cost into categories for quick user understanding
@@ -455,6 +496,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         toolSubscriptionCostMax: toolSubscriptionMax,
         infrastructureCostMin: infrastructureCosts.min,
         infrastructureCostMax: infrastructureCosts.max,
+        infrastructureBreakdown: infrastructureCosts.breakdown,
         totalCostMin,
         totalCostMax,
         costClassification: costClassification.class,

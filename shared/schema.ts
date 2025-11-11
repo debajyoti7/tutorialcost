@@ -45,6 +45,13 @@ export const analyses = pgTable("analyses", {
     toolSubscriptionCostMax: number;
     infrastructureCostMin: number;
     infrastructureCostMax: number;
+    infrastructureBreakdown: Array<{
+      toolName: string;
+      component: string;
+      description: string;
+      costMin: number;
+      costMax: number;
+    }>;
     totalCostMin: number;
     totalCostMax: number;
     implementationTimeEstimate: string;
