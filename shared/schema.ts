@@ -20,6 +20,7 @@ export const analyses = pgTable("analyses", {
     estimatedCostMin: number;
     estimatedCostMax: number;
     complexity: 'Low' | 'Medium' | 'High';
+    usagePattern?: 'learning' | 'prototype' | 'production' | 'high-volume';
   }[]>(),
   tools: jsonb("tools").notNull().$type<{
     id: string;
@@ -37,6 +38,8 @@ export const analyses = pgTable("analyses", {
     timeToImplement: string;
     url: string;
     mentioned: string[];
+    deploymentType?: 'cloud' | 'self-hosted' | 'hybrid' | 'api-only';
+    confidence?: 'high' | 'medium' | 'low';
   }[]>(),
   summary: jsonb("summary").notNull().$type<{
     totalExperiments: number;
