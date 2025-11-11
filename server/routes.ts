@@ -7,6 +7,41 @@ import { insertAnalysisSchema } from "@shared/schema";
 import { z } from "zod";
 import { AnalysisError, createNoExperimentsError, createInvalidUrlError, createUnsupportedPlatformError } from "./errors";
 
+// Classify overall cost into categories for quick user understanding
+function getCostClassification(
+  overallCostMin: number, 
+  overallCostMax: number, 
+  hasFreeOption: boolean
+): {
+  class: 'Free' | 'Low' | 'Medium' | 'High';
+  label: string;
+} {
+  // If there's a genuine free option and max cost is 0, it's truly free
+  if (hasFreeOption && overallCostMax === 0) {
+    return { class: 'Free', label: 'Free to reproduce' };
+  }
+  
+  // Mixed scenario: free option with optional paid
+  if (hasFreeOption && overallCostMax > 0) {
+    if (overallCostMax <= 100) {
+      return { class: 'Free', label: 'Free (optional paid: Low)' };
+    } else if (overallCostMax <= 500) {
+      return { class: 'Free', label: 'Free (optional paid: Medium)' };
+    } else {
+      return { class: 'Free', label: 'Free (optional paid: High)' };
+    }
+  }
+  
+  // Pure paid tiers - classify by cost range
+  if (overallCostMax <= 100) {
+    return { class: 'Low', label: 'Low cost to reproduce' };
+  } else if (overallCostMax <= 500) {
+    return { class: 'Medium', label: 'Medium cost to reproduce' };
+  } else {
+    return { class: 'High', label: 'High cost to reproduce' };
+  }
+}
+
 // Parse pricing information from AI's suggested tier context
 function parsePricingFromContext(suggestedContext?: string): {
   isFree: boolean;
@@ -59,7 +94,7 @@ function parsePricingFromContext(suggestedContext?: string): {
         // Skip if this matched the "$0" we already identified as free
         if (minCost === 0) {
           // Look for the next price range
-          const allCostMatches = [...contextLower.matchAll(/\$(\d+(?:\.\d+)?)\s*-?\s*(\d+(?:\.\d+)?)?/g)];
+          const allCostMatches = Array.from(contextLower.matchAll(/\$(\d+(?:\.\d+)?)\s*-?\s*(\d+(?:\.\d+)?)?/g));
           const nonZeroMatch = allCostMatches.find(match => parseFloat(match[1]) > 0);
           
           if (nonZeroMatch) {
@@ -319,6 +354,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Use the summary from AI analysis instead of manual calculation
       // The aiAnalysis.summary already contains the proper cost range calculations
+      
+      // Determine if any tool has a free option
+      const hasFreeToolOption = detailedTools.some(tool => tool.pricing.free);
+      
+      // Add cost classification to the summary
+      const costClassification = getCostClassification(
+        aiAnalysis.summary.overallCostRangeMin,
+        aiAnalysis.summary.overallCostRangeMax,
+        hasFreeToolOption
+      );
+      
+      const enhancedSummary = {
+        ...aiAnalysis.summary,
+        costClassification: costClassification.class,
+        costClassificationLabel: costClassification.label
+      };
 
       const processingTime = Math.round((Date.now() - startTime) / 1000);
 
@@ -331,7 +382,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         transcript: contentInfo.transcript,
         experiments: aiAnalysis.experiments,
         tools: detailedTools,
-        summary: aiAnalysis.summary,
+        summary: enhancedSummary,
         processingTime
       };
 
@@ -348,7 +399,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
         experiments: aiAnalysis.experiments,
         tools: detailedTools,
-        summary: aiAnalysis.summary,
+        summary: enhancedSummary,
         processingTime
       });
 
