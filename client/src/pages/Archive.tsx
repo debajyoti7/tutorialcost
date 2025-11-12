@@ -1,10 +1,23 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { 
   Search, 
   Star, 
@@ -13,7 +26,8 @@ import {
   DollarSign, 
   Zap,
   Filter,
-  ArrowLeft
+  ArrowLeft,
+  SlidersHorizontal
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -42,22 +56,79 @@ interface AnalysisListItem {
 export default function Archive() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterFavorites, setFilterFavorites] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [costRange, setCostRange] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("newest");
 
   const { data: analyses = [], isLoading } = useQuery<AnalysisListItem[]>({
     queryKey: ["/api/analyses"],
   });
 
-  const filteredAnalyses = analyses.filter(analysis => {
-    const matchesSearch = 
-      analysis.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      analysis.url.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (analysis.label && analysis.label.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      analysis.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    const matchesFavorite = !filterFavorites || analysis.isFavorite;
-    
-    return matchesSearch && matchesFavorite;
-  });
+  // Extract all unique tags from analyses
+  const allTags = useMemo(() => {
+    const tags = new Set<string>();
+    analyses.forEach(analysis => {
+      analysis.tags.forEach(tag => tags.add(tag));
+    });
+    return Array.from(tags).sort();
+  }, [analyses]);
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev =>
+      prev.includes(tag)
+        ? prev.filter(t => t !== tag)
+        : [...prev, tag]
+    );
+  };
+
+  const filteredAndSortedAnalyses = useMemo(() => {
+    let filtered = analyses.filter(analysis => {
+      // Search filter
+      const matchesSearch = 
+        analysis.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        analysis.url.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (analysis.label && analysis.label.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        analysis.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+      
+      // Favorites filter
+      const matchesFavorite = !filterFavorites || analysis.isFavorite;
+      
+      // Tags filter
+      const matchesTags = selectedTags.length === 0 || 
+        selectedTags.some(tag => analysis.tags.includes(tag));
+      
+      // Cost range filter
+      let matchesCost = true;
+      if (costRange !== "all") {
+        const maxCost = analysis.summary.totalCostMax;
+        if (costRange === "free") {
+          matchesCost = maxCost === 0;
+        } else if (costRange === "low") {
+          matchesCost = maxCost > 0 && maxCost <= 50;
+        } else if (costRange === "medium") {
+          matchesCost = maxCost > 50 && maxCost <= 200;
+        } else if (costRange === "high") {
+          matchesCost = maxCost > 200;
+        }
+      }
+      
+      return matchesSearch && matchesFavorite && matchesTags && matchesCost;
+    });
+
+    // Sort
+    filtered.sort((a, b) => {
+      if (sortBy === "newest") {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      } else if (sortBy === "oldest") {
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      } else if (sortBy === "most-viewed") {
+        return b.viewCount - a.viewCount;
+      }
+      return 0;
+    });
+
+    return filtered;
+  }, [analyses, searchQuery, filterFavorites, selectedTags, costRange, sortBy]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -73,7 +144,7 @@ export default function Archive() {
             <div>
               <h1 className="text-2xl font-bold">Archived Experiments</h1>
               <p className="text-sm text-muted-foreground">
-                {filteredAnalyses.length} {filteredAnalyses.length === 1 ? 'analysis' : 'analyses'}
+                {filteredAndSortedAnalyses.length} {filteredAndSortedAnalyses.length === 1 ? 'analysis' : 'analyses'}
               </p>
             </div>
           </div>
@@ -82,9 +153,9 @@ export default function Archive() {
 
       {/* Filters */}
       <div className="border-b bg-card">
-        <div className="container max-w-7xl mx-auto px-4 py-4">
-          <div className="flex gap-4 items-center">
-            <div className="flex-1 relative">
+        <div className="container max-w-7xl mx-auto px-4 py-4 space-y-4">
+          <div className="flex gap-4 items-center flex-wrap">
+            <div className="flex-1 min-w-[200px] relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search by title, URL, label, or tags..."
@@ -101,8 +172,64 @@ export default function Archive() {
               data-testid="button-filter-favorites"
             >
               <Star className={`h-4 w-4 mr-2 ${filterFavorites ? 'fill-current' : ''}`} />
-              Favorites Only
+              Favorites
             </Button>
+          </div>
+
+          <div className="flex gap-4 items-center flex-wrap">
+            {/* Tags Filter */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" data-testid="button-filter-tags">
+                  <SlidersHorizontal className="h-4 w-4 mr-2" />
+                  Tags {selectedTags.length > 0 && `(${selectedTags.length})`}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                {allTags.length === 0 ? (
+                  <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                    No tags available
+                  </div>
+                ) : (
+                  allTags.map((tag) => (
+                    <DropdownMenuCheckboxItem
+                      key={tag}
+                      checked={selectedTags.includes(tag)}
+                      onCheckedChange={() => toggleTag(tag)}
+                      data-testid={`checkbox-tag-${tag}`}
+                    >
+                      {tag}
+                    </DropdownMenuCheckboxItem>
+                  ))
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Cost Range Filter */}
+            <Select value={costRange} onValueChange={setCostRange}>
+              <SelectTrigger className="w-[180px]" data-testid="select-cost-range">
+                <SelectValue placeholder="Cost Range" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Costs</SelectItem>
+                <SelectItem value="free">Free ($0)</SelectItem>
+                <SelectItem value="low">Low ($1-50)</SelectItem>
+                <SelectItem value="medium">Medium ($51-200)</SelectItem>
+                <SelectItem value="high">High ($200+)</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Sort By */}
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-[180px]" data-testid="select-sort">
+                <SelectValue placeholder="Sort By" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">Newest First</SelectItem>
+                <SelectItem value="oldest">Oldest First</SelectItem>
+                <SelectItem value="most-viewed">Most Viewed</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
@@ -113,16 +240,16 @@ export default function Archive() {
           <div className="flex items-center justify-center py-12">
             <div className="text-muted-foreground">Loading analyses...</div>
           </div>
-        ) : filteredAnalyses.length === 0 ? (
+        ) : filteredAndSortedAnalyses.length === 0 ? (
           <div className="text-center py-12">
             <Filter className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h2 className="text-xl font-semibold mb-2">No analyses found</h2>
             <p className="text-muted-foreground mb-6">
-              {searchQuery || filterFavorites
+              {searchQuery || filterFavorites || selectedTags.length > 0 || costRange !== "all"
                 ? "Try adjusting your filters"
                 : "Run your first analysis to see results here"}
             </p>
-            {!searchQuery && !filterFavorites && (
+            {!searchQuery && !filterFavorites && selectedTags.length === 0 && costRange === "all" && (
               <Link href="/">
                 <Button data-testid="button-new-analysis">
                   Start New Analysis
@@ -132,7 +259,7 @@ export default function Archive() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredAnalyses.map((analysis) => (
+            {filteredAndSortedAnalyses.map((analysis) => (
               <Link key={analysis.id} href={`/analysis/${analysis.id}`}>
                 <Card className="h-full hover-elevate cursor-pointer transition-all" data-testid={`card-analysis-${analysis.id}`}>
                   <CardHeader>
