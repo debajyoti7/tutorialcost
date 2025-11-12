@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
+import { motion } from "framer-motion";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -132,48 +133,67 @@ export default function Archive() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card">
-        <div className="container max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+      {/* Gradient Hero Header */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-background to-emerald-500/10 border-b border-border/50">
+        <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:50px_50px]" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
+        
+        <div className="relative container max-w-7xl mx-auto px-4 py-8">
+          <div className="flex items-center gap-4 mb-4">
             <Link href="/">
-              <Button variant="ghost" size="icon" data-testid="button-back-home">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
+              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                <Button variant="ghost" size="icon" className="hover-elevate" data-testid="button-back-home">
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+              </motion.div>
             </Link>
             <div>
-              <h1 className="text-2xl font-bold">Archived Experiments</h1>
-              <p className="text-sm text-muted-foreground">
-                {filteredAndSortedAnalyses.length} {filteredAndSortedAnalyses.length === 1 ? 'analysis' : 'analyses'}
-              </p>
+              <motion.h1 
+                className="text-4xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                Archived Experiments
+              </motion.h1>
+              <motion.p 
+                className="text-base text-muted-foreground mt-1"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.1 }}
+              >
+                {filteredAndSortedAnalyses.length} {filteredAndSortedAnalyses.length === 1 ? 'analysis' : 'analyses'} in your collection
+              </motion.p>
             </div>
           </div>
         </div>
-      </header>
+      </div>
 
-      {/* Filters */}
-      <div className="border-b bg-card">
-        <div className="container max-w-7xl mx-auto px-4 py-4 space-y-4">
+      {/* Filters Section with Glassmorphism */}
+      <div className="sticky top-16 z-40 bg-background/80 backdrop-blur-xl border-b border-border/50">
+        <div className="container max-w-7xl mx-auto px-4 py-6 space-y-4">
           <div className="flex gap-4 items-center flex-wrap">
             <div className="flex-1 min-w-[200px] relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-primary" />
               <Input
                 placeholder="Search by title, URL, label, or tags..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-11 h-11 bg-background/50 border-border/50 focus:border-primary/50"
                 data-testid="input-search"
               />
             </div>
-            <Button
-              variant={filterFavorites ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFilterFavorites(!filterFavorites)}
-              data-testid="button-filter-favorites"
-            >
-              <Star className={`h-4 w-4 mr-2 ${filterFavorites ? 'fill-current' : ''}`} />
-              Favorites
-            </Button>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button
+                variant={filterFavorites ? "default" : "outline"}
+                size="default"
+                onClick={() => setFilterFavorites(!filterFavorites)}
+                className="h-11 gap-2"
+                data-testid="button-filter-favorites"
+              >
+                <Star className={`h-4 w-4 ${filterFavorites ? 'fill-current' : ''}`} />
+                Favorites
+              </Button>
+            </motion.div>
           </div>
 
           <div className="flex gap-4 items-center flex-wrap">
@@ -259,9 +279,16 @@ export default function Archive() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredAndSortedAnalyses.map((analysis) => (
-              <Link key={analysis.id} href={`/analysis/${analysis.id}`}>
-                <Card className="h-full hover-elevate cursor-pointer transition-all" data-testid={`card-analysis-${analysis.id}`}>
+            {filteredAndSortedAnalyses.map((analysis, index) => (
+              <motion.div
+                key={analysis.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.05 }}
+                whileHover={{ y: -5 }}
+              >
+                <Link href={`/analysis/${analysis.id}`}>
+                  <Card className="h-full hover-elevate cursor-pointer transition-all border-border/50 bg-card/80 backdrop-blur-sm" data-testid={`card-analysis-${analysis.id}`}>
                   <CardHeader>
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
@@ -344,7 +371,8 @@ export default function Archive() {
                     </div>
                   </CardFooter>
                 </Card>
-              </Link>
+                </Link>
+              </motion.div>
             ))}
           </div>
         )}

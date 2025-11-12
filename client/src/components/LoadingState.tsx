@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { Loader2, Brain, Zap, Search, FileText } from "lucide-react";
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 
 interface LoadingStateProps {
   currentStep?: string;
@@ -48,20 +49,41 @@ export default function LoadingState({ currentStep }: LoadingStateProps) {
   const CurrentIcon = steps[stepIndex]?.icon || Brain;
 
   return (
-    <div className="w-full max-w-2xl mx-auto">
-      <Card className="border-border shadow-lg">
+    <motion.div 
+      className="w-full max-w-2xl mx-auto"
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.5 }}
+    >
+      <Card className="border-border/50 bg-card/80 backdrop-blur-xl shadow-2xl">
         <CardHeader className="text-center pb-6">
-          <div className="flex justify-center mb-4">
-            <div className="flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full">
-              <CurrentIcon className="w-8 h-8 text-primary animate-pulse" />
+          <motion.div 
+            className="flex justify-center mb-4"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+          >
+            <div className="flex items-center justify-center w-20 h-20 bg-gradient-to-br from-primary/20 to-emerald-500/20 rounded-2xl backdrop-blur-sm border border-primary/20">
+              <CurrentIcon className="w-10 h-10 text-primary" />
             </div>
-          </div>
-          <CardTitle className="text-xl font-bold text-foreground">
-            Analyzing Content
-          </CardTitle>
-          <CardDescription className="text-muted-foreground">
-            Our AI is processing your content to identify LLM experiments and automation tools
-          </CardDescription>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <CardTitle className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+              Analyzing Content
+            </CardTitle>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+          >
+            <CardDescription className="text-base text-muted-foreground mt-2">
+              Our AI is processing your content to identify LLM experiments and automation tools
+            </CardDescription>
+          </motion.div>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
@@ -79,51 +101,63 @@ export default function LoadingState({ currentStep }: LoadingStateProps) {
               const isCompleted = index < stepIndex;
               
               return (
-                <div 
+                <motion.div 
                   key={index}
-                  className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className={`flex items-center gap-3 p-4 rounded-xl transition-all ${
                     isActive 
-                      ? 'bg-primary/10 border border-primary/20' 
+                      ? 'bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/30 shadow-lg shadow-primary/10' 
                       : isCompleted 
-                        ? 'bg-emerald/10 border border-emerald/20'
-                        : 'bg-muted/30'
+                        ? 'bg-gradient-to-r from-emerald-500/10 to-emerald-500/5 border border-emerald-500/30'
+                        : 'bg-muted/20 border border-border/30'
                   }`}
                   data-testid={`step-${index}`}
                 >
-                  <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
-                    isActive 
-                      ? 'bg-primary text-primary-foreground' 
-                      : isCompleted
-                        ? 'bg-emerald text-emerald-foreground'
-                        : 'bg-muted text-muted-foreground'
-                  }`}>
+                  <motion.div 
+                    className={`flex items-center justify-center w-10 h-10 rounded-xl ${
+                      isActive 
+                        ? 'bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-lg shadow-primary/20' 
+                        : isCompleted
+                          ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/20'
+                          : 'bg-muted text-muted-foreground'
+                    }`}
+                    animate={isActive ? { scale: [1, 1.1, 1] } : {}}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
                     {isActive ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader2 className="w-5 h-5 animate-spin" />
                     ) : (
-                      <Icon className="w-4 h-4" />
+                      <Icon className="w-5 h-5" />
                     )}
-                  </div>
-                  <span className={`text-sm ${
+                  </motion.div>
+                  <span className={`text-sm font-medium ${
                     isActive 
-                      ? 'text-foreground font-medium' 
+                      ? 'text-foreground' 
                       : isCompleted
-                        ? 'text-emerald font-medium'
+                        ? 'text-foreground'
                         : 'text-muted-foreground'
                   }`}>
                     {step.text}
                   </span>
-                </div>
+                </motion.div>
               );
             })}
           </div>
 
-          <div className="text-center pt-4">
+          <motion.div 
+            className="text-center pt-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.8 }}
+          >
             <p className="text-sm text-muted-foreground">
               This usually takes 10-15 seconds depending on content length
             </p>
-          </div>
+          </motion.div>
         </CardContent>
       </Card>
-    </div>
+    </motion.div>
   );
 }

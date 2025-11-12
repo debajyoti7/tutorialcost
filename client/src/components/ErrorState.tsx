@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, RefreshCw, Youtube, FileText, Wifi, Brain, HelpCircle } from "lucide-react";
+import { motion } from "framer-motion";
 
 export type ErrorType = 
   | 'transcript-disabled'
@@ -142,37 +143,71 @@ export default function ErrorState({
   const Icon = config.icon;
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <Card className="border-border shadow-lg">
+    <motion.div 
+      className="max-w-3xl mx-auto"
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.5 }}
+    >
+      <Card className="border-border/50 bg-card/80 backdrop-blur-xl shadow-2xl">
         <CardHeader>
-          <div className="flex items-start gap-4">
-            <div className={`p-3 ${config.bgColor} rounded-lg`}>
-              <Icon className={`w-6 h-6 ${config.color}`} />
-            </div>
+          <motion.div 
+            className="flex items-start gap-4"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <motion.div 
+              className={`p-4 ${config.bgColor} rounded-2xl border border-current/10`}
+              animate={{ scale: [1, 1.05, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            >
+              <Icon className={`w-7 h-7 ${config.color}`} />
+            </motion.div>
             <div className="flex-1">
-              <CardTitle className="text-xl text-foreground">{config.title}</CardTitle>
-              <CardDescription className="text-base mt-1">
+              <CardTitle className="text-2xl bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+                {config.title}
+              </CardTitle>
+              <CardDescription className="text-base mt-2 leading-relaxed">
                 {message || config.description}
               </CardDescription>
             </div>
-          </div>
+          </motion.div>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div>
-            <h4 className="text-sm font-medium text-foreground mb-3">What you can try:</h4>
-            <div className="space-y-2">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <h4 className="text-base font-semibold text-foreground mb-4 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-primary" />
+              What you can try:
+            </h4>
+            <div className="space-y-3">
               {config.suggestions.map((suggestion, index) => (
-                <div key={index} className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 bg-primary rounded-full mt-2" />
-                  <p className="text-sm text-muted-foreground">{suggestion}</p>
-                </div>
+                <motion.div 
+                  key={index} 
+                  className="flex items-start gap-3"
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.4 + index * 0.1 }}
+                >
+                  <div className="w-2 h-2 bg-primary rounded-full mt-1.5" />
+                  <p className="text-sm text-muted-foreground leading-relaxed">{suggestion}</p>
+                </motion.div>
               ))}
             </div>
-          </div>
+          </motion.div>
 
-          <div className="p-4 bg-muted/50 rounded-lg">
-            <h4 className="text-sm font-medium text-foreground mb-2">Example of Good Content:</h4>
-            <p className="text-sm text-muted-foreground mb-2">
+          <motion.div 
+            className="p-5 bg-gradient-to-br from-muted/30 to-muted/10 rounded-xl border border-border/30"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7 }}
+          >
+            <h4 className="text-sm font-semibold text-foreground mb-3">Example of Good Content:</h4>
+            <p className="text-sm text-foreground font-medium mb-3">
               "How to Build an AI Voice Agent with ElevenLabs and n8n"
             </p>
             <div className="flex flex-wrap gap-2">
@@ -180,33 +215,44 @@ export default function ErrorState({
               <Badge variant="secondary" className="text-xs">Has Transcript</Badge>
               <Badge variant="secondary" className="text-xs">Technical Content</Badge>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="flex gap-3 pt-2">
+          <motion.div 
+            className="flex gap-3 pt-2"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.9 }}
+          >
             {onRetry && (
-              <Button 
-                onClick={onRetry}
-                variant="default"
-                className="flex-1"
-                data-testid="button-retry"
-              >
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Try Again
-              </Button>
+              <motion.div className="flex-1" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <Button 
+                  onClick={onRetry}
+                  variant="default"
+                  size="lg"
+                  className="w-full gap-2"
+                  data-testid="button-retry"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Try Again
+                </Button>
+              </motion.div>
             )}
             {onNewAnalysis && (
-              <Button 
-                onClick={onNewAnalysis}
-                variant={onRetry ? "outline" : "default"}
-                className="flex-1"
-                data-testid="button-new-analysis"
-              >
-                Analyze Different Video
-              </Button>
+              <motion.div className="flex-1" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <Button 
+                  onClick={onNewAnalysis}
+                  variant={onRetry ? "outline" : "default"}
+                  size="lg"
+                  className="w-full"
+                  data-testid="button-new-analysis"
+                >
+                  Analyze Different Video
+                </Button>
+              </motion.div>
             )}
-          </div>
+          </motion.div>
         </CardContent>
       </Card>
-    </div>
+    </motion.div>
   );
 }

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
+import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -154,23 +155,29 @@ export default function AnalysisDetail() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card sticky top-0 z-10">
+      {/* Modern Sticky Header with Glassmorphism */}
+      <header className="sticky top-16 z-40 bg-background/80 backdrop-blur-xl border-b border-border/50 shadow-sm">
         <div className="container max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4 min-w-0 flex-1">
               <Link href="/archive">
-                <Button variant="ghost" size="icon" data-testid="button-back-archive">
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
+                <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                  <Button variant="ghost" size="icon" className="hover-elevate" data-testid="button-back-archive">
+                    <ArrowLeft className="h-5 w-5" />
+                  </Button>
+                </motion.div>
               </Link>
               <div className="min-w-0 flex-1">
-                <h1 className="text-xl font-bold truncate">
+                <motion.h1 
+                  className="text-2xl font-bold truncate bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                >
                   {analysis.label || analysis.contentInfo.title}
-                </h1>
-                <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Eye className="h-3.5 w-3.5" />
+                </motion.h1>
+                <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
+                  <span className="flex items-center gap-1.5">
+                    <Eye className="h-4 w-4 text-primary" />
                     {analysis.viewCount} views
                   </span>
                   {analysis.isOwnedByCurrentSession && (
@@ -182,35 +189,44 @@ export default function AnalysisDetail() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => toggleFavoriteMutation.mutate(!analysis.isFavorite)}
-                data-testid="button-toggle-favorite"
-              >
-                <Star
-                  className={`h-5 w-5 ${
-                    analysis.isFavorite
-                      ? "fill-yellow-500 text-yellow-500"
-                      : "text-muted-foreground"
-                  }`}
-                />
-              </Button>
-              {!isEditingMetadata ? (
-                <Button variant="outline" size="sm" onClick={startEditing} data-testid="button-edit-metadata">
-                  <Edit2 className="h-4 w-4 mr-2" />
-                  Edit
+              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="hover-elevate"
+                  onClick={() => toggleFavoriteMutation.mutate(!analysis.isFavorite)}
+                  data-testid="button-toggle-favorite"
+                >
+                  <Star
+                    className={`h-5 w-5 ${
+                      analysis.isFavorite
+                        ? "fill-yellow-500 text-yellow-500"
+                        : "text-muted-foreground"
+                    }`}
+                  />
                 </Button>
+              </motion.div>
+              {!isEditingMetadata ? (
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button variant="outline" size="default" onClick={startEditing} className="gap-2" data-testid="button-edit-metadata">
+                    <Edit2 className="h-4 w-4" />
+                    Edit
+                  </Button>
+                </motion.div>
               ) : (
                 <>
-                  <Button variant="outline" size="sm" onClick={() => setIsEditingMetadata(false)} data-testid="button-cancel-edit">
-                    <X className="h-4 w-4 mr-2" />
-                    Cancel
-                  </Button>
-                  <Button size="sm" onClick={saveMetadata} disabled={updateMetadataMutation.isPending} data-testid="button-save-metadata">
-                    <Save className="h-4 w-4 mr-2" />
-                    Save
-                  </Button>
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Button variant="outline" size="default" onClick={() => setIsEditingMetadata(false)} className="gap-2" data-testid="button-cancel-edit">
+                      <X className="h-4 w-4" />
+                      Cancel
+                    </Button>
+                  </motion.div>
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Button size="default" onClick={saveMetadata} disabled={updateMetadataMutation.isPending} className="gap-2" data-testid="button-save-metadata">
+                      <Save className="h-4 w-4" />
+                      Save
+                    </Button>
+                  </motion.div>
                 </>
               )}
             </div>
@@ -219,12 +235,20 @@ export default function AnalysisDetail() {
       </header>
 
       <div className="container max-w-7xl mx-auto px-4 py-8">
-        {/* Metadata Edit Panel */}
+        {/* Metadata Edit Panel with Modern Styling */}
         {isEditingMetadata && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Edit Metadata</CardTitle>
-            </CardHeader>
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+          >
+            <Card className="mb-6 border-border/50 bg-card/80 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Edit2 className="h-5 w-5 text-primary" />
+                  Edit Metadata
+                </CardTitle>
+              </CardHeader>
             <CardContent className="space-y-4">
               <div>
                 <label className="text-sm font-medium mb-2 block">
@@ -284,6 +308,7 @@ export default function AnalysisDetail() {
               </div>
             </CardContent>
           </Card>
+          </motion.div>
         )}
 
         {/* Analysis Results */}
@@ -299,14 +324,23 @@ export default function AnalysisDetail() {
 
         {/* Notes Display (when not editing) */}
         {!isEditingMetadata && analysis.notes && (
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Notes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm whitespace-pre-wrap">{analysis.notes}</p>
-            </CardContent>
-          </Card>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+          >
+            <Card className="mt-6 border-border/50 bg-card/80 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Tag className="h-5 w-5 text-primary" />
+                  Notes
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm whitespace-pre-wrap leading-relaxed">{analysis.notes}</p>
+              </CardContent>
+            </Card>
+          </motion.div>
         )}
       </div>
     </div>
