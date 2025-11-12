@@ -287,6 +287,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (existingAnalyses.length > 0) {
         const latest = existingAnalyses[0];
         console.log(`Returning cached analysis for ${url}`);
+        
+        // Increment view count for cached analysis
+        const updated = await storage.incrementViewCount(latest.id);
+        
+        // If this is the first time this session is viewing this analysis and it doesn't have a session hash, add it
+        const sessionHash = req.sessionID ? hashSessionId(req.sessionID) : null;
+        if (sessionHash && !latest.sessionHash) {
+          await storage.updateAnalysisMetadata(latest.id, { });
+          // Note: We don't overwrite the original creator's session hash
+        }
+        
         return res.json({
           id: latest.id,
           contentInfo: {
@@ -298,7 +309,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           experiments: latest.experiments,
           tools: latest.tools,
           summary: latest.summary,
-          processingTime: latest.processingTime
+          processingTime: latest.processingTime,
+          viewCount: updated?.viewCount || latest.viewCount,
+          lastViewedAt: updated?.lastViewedAt || latest.lastViewedAt
         });
       }
 
