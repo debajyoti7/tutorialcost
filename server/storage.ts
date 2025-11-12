@@ -1,5 +1,9 @@
 import { type User, type InsertUser, type Analysis, type InsertAnalysis, type Tool, type InsertTool } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
+import { analyses, toolDatabase, users } from "@shared/schema";
+import { eq, sql } from "drizzle-orm";
 
 // Storage interface for the content analyzer
 export interface IStorage {
@@ -574,4 +578,391 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Database storage implementation using Drizzle ORM
+export class DbStorage implements IStorage {
+  private db;
+  private pool;
+  private toolsInitialized = false;
+
+  constructor() {
+    this.pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    this.db = drizzle(this.pool);
+    this.initializeToolDatabase();
+  }
+
+  private async initializeToolDatabase() {
+    if (this.toolsInitialized) return;
+    
+    const commonTools: InsertTool[] = [
+      {
+        id: "openai-gpt4",
+        name: "OpenAI GPT-4",
+        category: "Language Model",
+        description: "Advanced language model for text generation, analysis, and reasoning tasks",
+        baseUrl: "https://openai.com",
+        pricingTiers: [
+          {
+            tier: "ChatGPT Plus",
+            monthlyMin: 20,
+            monthlyMax: 20,
+            priceType: "fixed" as const,
+            features: ["GPT-4 access", "Advanced data analysis", "Web browsing", "Custom GPTs"],
+            usage: "40 messages per 3 hours"
+          },
+          {
+            tier: "API Usage (GPT-4o)",
+            monthlyMin: 0,
+            monthlyMax: 500,
+            priceType: "per-token" as const,
+            features: ["Pay per token", "Higher rate limits", "Programmatic access"],
+            usage: "$2.50/1M input tokens, $10/1M output tokens",
+            usageUnit: "per 1M tokens"
+          },
+          {
+            tier: "API Usage (GPT-4o Mini)",
+            monthlyMin: 0,
+            monthlyMax: 100,
+            priceType: "per-token" as const,
+            features: ["Cost-effective", "Fast responses", "Programmatic access"],
+            usage: "$0.15/1M input tokens, $0.60/1M output tokens",
+            usageUnit: "per 1M tokens"
+          }
+        ],
+        difficulty: "Beginner",
+        avgImplementationTime: "1-2 hours",
+        isActive: true
+      },
+      {
+        id: "pinecone",
+        name: "Pinecone",
+        category: "Vector Database",
+        description: "Managed vector database for similarity search and recommendations",
+        baseUrl: "https://pinecone.io",
+        pricingTiers: [
+          {
+            tier: "Starter",
+            monthlyMin: 0,
+            monthlyMax: 0,
+            priceType: "free" as const,
+            features: ["1 index", "1 project", "Community support"],
+            usage: "Free tier with limitations"
+          },
+          {
+            tier: "Standard",
+            monthlyMin: 50,
+            monthlyMax: 500,
+            priceType: "usage-based" as const,
+            features: ["Multiple indexes", "Production ready", "Email support"],
+            usage: "$50 minimum, then pay-as-you-go"
+          },
+          {
+            tier: "Enterprise",
+            monthlyMin: 500,
+            monthlyMax: 5000,
+            priceType: "usage-based" as const,
+            features: ["Advanced features", "Dedicated support", "SLA"],
+            usage: "$500 minimum commitment"
+          }
+        ],
+        difficulty: "Intermediate",
+        avgImplementationTime: "3-4 hours",
+        isActive: true
+      },
+      {
+        id: "langchain",
+        name: "LangChain",
+        category: "AI Framework",
+        description: "Framework for developing applications powered by language models",
+        baseUrl: "https://langchain.com",
+        pricingTiers: [
+          {
+            tier: "Open Source",
+            monthlyMin: 0,
+            monthlyMax: 0,
+            priceType: "free" as const,
+            features: ["Core library", "Community support", "Self-hosted"],
+            usage: "Free to use, infrastructure costs only"
+          }
+        ],
+        difficulty: "Intermediate",
+        avgImplementationTime: "2-3 hours",
+        isActive: true
+      },
+      {
+        id: "supabase",
+        name: "Supabase",
+        category: "Database & Backend",
+        description: "Open-source Firebase alternative with PostgreSQL database",
+        baseUrl: "https://supabase.com",
+        pricingTiers: [
+          {
+            tier: "Free",
+            monthlyMin: 0,
+            monthlyMax: 0,
+            priceType: "free" as const,
+            features: ["500MB database", "5GB bandwidth", "50MB file storage", "Community support"],
+            usage: "2 free projects, paused after 1 week inactivity"
+          },
+          {
+            tier: "Pro",
+            monthlyMin: 25,
+            monthlyMax: 25,
+            priceType: "fixed" as const,
+            features: ["8GB database", "250GB bandwidth", "100GB file storage", "Email support"],
+            usage: "$25/month per project"
+          },
+          {
+            tier: "Pro (with usage)",
+            monthlyMin: 25,
+            monthlyMax: 500,
+            priceType: "usage-based" as const,
+            features: ["Unlimited projects", "Compute add-ons", "Custom domain", "Point-in-time recovery"],
+            usage: "$25 base + overages for compute/storage/bandwidth",
+            usageUnit: "per resource"
+          }
+        ],
+        difficulty: "Beginner",
+        avgImplementationTime: "2-4 hours",
+        isActive: true
+      },
+      {
+        id: "weaviate",
+        name: "Weaviate",
+        category: "Vector Database",
+        description: "AI-native vector database with semantic search capabilities",
+        baseUrl: "https://weaviate.io",
+        pricingTiers: [
+          {
+            tier: "Sandbox (Free)",
+            monthlyMin: 0,
+            monthlyMax: 0,
+            priceType: "free" as const,
+            features: ["14-day sandbox", "Limited resources", "Testing only"],
+            usage: "Free sandbox expires after 14 days"
+          },
+          {
+            tier: "Serverless",
+            monthlyMin: 0,
+            monthlyMax: 200,
+            priceType: "usage-based" as const,
+            features: ["Pay per query", "Auto-scaling", "No infrastructure management"],
+            usage: "$0.10 per million vector dimensions stored/month",
+            usageUnit: "per million dimensions"
+          },
+          {
+            tier: "Enterprise Cloud",
+            monthlyMin: 500,
+            monthlyMax: 5000,
+            priceType: "usage-based" as const,
+            features: ["Dedicated instances", "SLA", "Advanced security", "24/7 support"],
+            usage: "Custom pricing based on scale",
+            usageUnit: "per instance"
+          }
+        ],
+        difficulty: "Intermediate",
+        avgImplementationTime: "3-5 hours",
+        isActive: true
+      },
+      {
+        id: "n8n",
+        name: "n8n",
+        category: "Workflow Automation",
+        description: "Fair-code workflow automation platform for technical users",
+        baseUrl: "https://n8n.io",
+        pricingTiers: [
+          {
+            tier: "Self-hosted (Free)",
+            monthlyMin: 0,
+            monthlyMax: 0,
+            priceType: "free" as const,
+            features: ["Open source", "Unlimited workflows", "All integrations", "Self-managed"],
+            usage: "Free to self-host, infrastructure costs only"
+          },
+          {
+            tier: "Cloud Starter",
+            monthlyMin: 20,
+            monthlyMax: 20,
+            priceType: "fixed" as const,
+            features: ["2,500 executions/month", "All integrations", "Cloud hosting"],
+            usage: "$20/month flat rate"
+          },
+          {
+            tier: "Cloud Pro",
+            monthlyMin: 50,
+            monthlyMax: 500,
+            priceType: "usage-based" as const,
+            features: ["20,000+ executions", "Priority support", "Advanced features"],
+            usage: "$50 base + usage overages",
+            usageUnit: "per execution"
+          }
+        ],
+        difficulty: "Intermediate",
+        avgImplementationTime: "3-6 hours",
+        isActive: true
+      },
+      {
+        id: "elevenlabs",
+        name: "ElevenLabs",
+        category: "AI Voice Synthesis",
+        description: "AI-powered text-to-speech and voice cloning platform",
+        baseUrl: "https://elevenlabs.io",
+        pricingTiers: [
+          {
+            tier: "Free",
+            monthlyMin: 0,
+            monthlyMax: 0,
+            priceType: "free" as const,
+            features: ["10,000 characters/month", "3 custom voices", "Basic quality"],
+            usage: "10K characters limit"
+          },
+          {
+            tier: "Starter",
+            monthlyMin: 5,
+            monthlyMax: 5,
+            priceType: "fixed" as const,
+            features: ["30,000 characters/month", "10 custom voices", "High quality"],
+            usage: "$5/month for 30K characters"
+          },
+          {
+            tier: "Creator",
+            monthlyMin: 22,
+            monthlyMax: 22,
+            priceType: "fixed" as const,
+            features: ["100,000 characters/month", "30 custom voices", "Ultra quality", "Voice cloning"],
+            usage: "$22/month for 100K characters"
+          },
+          {
+            tier: "Pro",
+            monthlyMin: 99,
+            monthlyMax: 330,
+            priceType: "usage-based" as const,
+            features: ["500,000 characters/month", "Unlimited voices", "Commercial license", "API access"],
+            usage: "$99 base + overages at $0.30/1K characters",
+            usageUnit: "per 1K characters"
+          }
+        ],
+        difficulty: "Beginner",
+        avgImplementationTime: "1-2 hours",
+        isActive: true
+      }
+    ];
+
+    try {
+      // Check if tools already exist
+      const existingTools = await this.db.select().from(toolDatabase).limit(1);
+      if (existingTools.length === 0) {
+        // Insert all tools
+        for (const tool of commonTools) {
+          await this.db.insert(toolDatabase).values(tool).onConflictDoNothing();
+        }
+      }
+      this.toolsInitialized = true;
+    } catch (error) {
+      console.error('Failed to initialize tool database:', error);
+    }
+  }
+
+  // User methods
+  async getUser(id: string): Promise<User | undefined> {
+    const result = await this.db.select().from(users).where(eq(users.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const result = await this.db.select().from(users).where(eq(users.username, username)).limit(1);
+    return result[0];
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const result = await this.db.insert(users).values(insertUser).returning();
+    return result[0];
+  }
+
+  // Analysis methods
+  async createAnalysis(insertAnalysis: InsertAnalysis): Promise<Analysis> {
+    const result = await this.db.insert(analyses).values(insertAnalysis).returning();
+    return result[0];
+  }
+
+  async getAnalysis(id: string): Promise<Analysis | undefined> {
+    const result = await this.db.select().from(analyses).where(eq(analyses.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getAnalysesByUrl(url: string): Promise<Analysis[]> {
+    return await this.db.select().from(analyses).where(eq(analyses.url, url));
+  }
+
+  async getAllAnalyses(): Promise<Analysis[]> {
+    return await this.db.select().from(analyses);
+  }
+
+  async incrementViewCount(id: string): Promise<Analysis | undefined> {
+    const result = await this.db
+      .update(analyses)
+      .set({ 
+        viewCount: sql`${analyses.viewCount} + 1`,
+        lastViewedAt: new Date()
+      })
+      .where(eq(analyses.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async updateAnalysisMetadata(id: string, metadata: {
+    label?: string;
+    tags?: string[];
+    isFavorite?: boolean;
+    notes?: string;
+  }): Promise<Analysis | undefined> {
+    const updates: any = {};
+    if (metadata.label !== undefined) updates.label = metadata.label;
+    if (metadata.tags !== undefined) updates.tags = metadata.tags;
+    if (metadata.isFavorite !== undefined) updates.isFavorite = metadata.isFavorite;
+    if (metadata.notes !== undefined) updates.notes = metadata.notes;
+    
+    const result = await this.db
+      .update(analyses)
+      .set(updates)
+      .where(eq(analyses.id, id))
+      .returning();
+    return result[0];
+  }
+
+  // Tool methods
+  async createTool(insertTool: InsertTool): Promise<Tool> {
+    const result = await this.db.insert(toolDatabase).values(insertTool).returning();
+    return result[0];
+  }
+
+  async getTool(id: string): Promise<Tool | undefined> {
+    const result = await this.db.select().from(toolDatabase).where(eq(toolDatabase.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getAllTools(): Promise<Tool[]> {
+    return await this.db.select().from(toolDatabase).where(eq(toolDatabase.isActive, true));
+  }
+
+  async searchTools(category?: string): Promise<Tool[]> {
+    if (!category) {
+      return await this.getAllTools();
+    }
+    
+    const allTools = await this.getAllTools();
+    return allTools.filter(tool => 
+      tool.category.toLowerCase().includes(category.toLowerCase())
+    );
+  }
+
+  async updateTool(id: string, updates: Partial<InsertTool>): Promise<Tool | undefined> {
+    const result = await this.db
+      .update(toolDatabase)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(toolDatabase.id, id))
+      .returning();
+    return result[0];
+  }
+}
+
+export const storage = new DbStorage();
