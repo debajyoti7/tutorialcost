@@ -6,6 +6,17 @@ import { analyzeContentForLLMExperiments } from "./gemini";
 import { insertAnalysisSchema } from "@shared/schema";
 import { z } from "zod";
 import { AnalysisError, createNoExperimentsError, createInvalidUrlError, createUnsupportedPlatformError } from "./errors";
+import { createHmac } from "crypto";
+import "express-session"; // Import for type augmentation
+
+// Hash session ID for privacy (HMAC-SHA256)
+function hashSessionId(sessionId: string): string {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) {
+    throw new Error('SESSION_SECRET environment variable is required for session hashing');
+  }
+  return createHmac('sha256', secret).update(sessionId).digest('hex');
+}
 
 // Estimate infrastructure costs for self-hosted tools
 function estimateInfrastructureCosts(tools: Array<{ 
@@ -521,12 +532,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const processingTime = Math.round((Date.now() - startTime) / 1000);
 
       // Save analysis to storage
+      const sessionHash = req.sessionID ? hashSessionId(req.sessionID) : null;
       const analysisData = {
         url,
         title: contentInfo.title,
         platform: contentInfo.platform,
         duration: contentInfo.duration,
         transcript: contentInfo.transcript,
+        sessionHash,
         experiments: experimentsWithCosts,
         tools: detailedTools,
         summary: enhancedSummary,
@@ -588,14 +601,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/analyses", async (req, res) => {
     try {
       const analyses = await storage.getAllAnalyses();
+      const currentSessionHash = req.sessionID ? hashSessionId(req.sessionID) : null;
+      
       res.json(analyses.map(analysis => ({
         id: analysis.id,
         title: analysis.title,
+        label: analysis.label,
         platform: analysis.platform,
         url: analysis.url,
         experimentsCount: analysis.experiments.length,
         toolsCount: analysis.tools.length,
         summary: analysis.summary,
+        viewCount: analysis.viewCount,
+        lastViewedAt: analysis.lastViewedAt,
+        tags: analysis.tags,
+        isFavorite: analysis.isFavorite,
+        notes: analysis.notes,
+        isOwnedByCurrentSession: analysis.sessionHash === currentSessionHash,
         createdAt: analysis.createdAt
       })));
     } catch (error) {
@@ -604,13 +626,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // GET /api/analyses/:id - Get specific analysis
+  // GET /api/analyses/:id - Get specific analysis and increment view count
   app.get("/api/analyses/:id", async (req, res) => {
     try {
-      const analysis = await storage.getAnalysis(req.params.id);
+      // Increment view count first
+      const analysis = await storage.incrementViewCount(req.params.id);
       if (!analysis) {
         return res.status(404).json({ error: 'Analysis not found' });
       }
+
+      const currentSessionHash = req.sessionID ? hashSessionId(req.sessionID) : null;
 
       res.json({
         id: analysis.id,
@@ -624,11 +649,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
         tools: analysis.tools,
         summary: analysis.summary,
         processingTime: analysis.processingTime,
+        viewCount: analysis.viewCount,
+        lastViewedAt: analysis.lastViewedAt,
+        label: analysis.label,
+        tags: analysis.tags,
+        isFavorite: analysis.isFavorite,
+        notes: analysis.notes,
+        isOwnedByCurrentSession: analysis.sessionHash === currentSessionHash,
         createdAt: analysis.createdAt
       });
     } catch (error) {
       console.error('Failed to get analysis:', error);
       res.status(500).json({ error: 'Failed to retrieve analysis' });
+    }
+  });
+
+  // PATCH /api/analyses/:id - Update analysis metadata
+  app.patch("/api/analyses/:id", async (req, res) => {
+    try {
+      const { label, tags, isFavorite, notes } = req.body;
+      
+      const updated = await storage.updateAnalysisMetadata(req.params.id, {
+        label,
+        tags,
+        isFavorite,
+        notes
+      });
+      
+      if (!updated) {
+        return res.status(404).json({ error: 'Analysis not found' });
+      }
+      
+      res.json({
+        id: updated.id,
+        label: updated.label,
+        tags: updated.tags,
+        isFavorite: updated.isFavorite,
+        notes: updated.notes
+      });
+    } catch (error) {
+      console.error('Failed to update analysis metadata:', error);
+      res.status(500).json({ error: 'Failed to update analysis metadata' });
     }
   });
 

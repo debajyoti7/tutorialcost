@@ -13,6 +13,13 @@ export interface IStorage {
   getAnalysis(id: string): Promise<Analysis | undefined>;
   getAnalysesByUrl(url: string): Promise<Analysis[]>;
   getAllAnalyses(): Promise<Analysis[]>;
+  incrementViewCount(id: string): Promise<Analysis | undefined>;
+  updateAnalysisMetadata(id: string, metadata: {
+    label?: string;
+    tags?: string[];
+    isFavorite?: boolean;
+    notes?: string;
+  }): Promise<Analysis | undefined>;
   
   // Tool database methods
   createTool(tool: InsertTool): Promise<Tool>;
@@ -455,6 +462,13 @@ export class MemStorage implements IStorage {
       ...insertAnalysis,
       duration: insertAnalysis.duration || null,
       transcript: insertAnalysis.transcript || null,
+      sessionHash: insertAnalysis.sessionHash || null,
+      label: insertAnalysis.label || null,
+      tags: (insertAnalysis.tags as string[]) || [],
+      isFavorite: insertAnalysis.isFavorite || false,
+      notes: insertAnalysis.notes || null,
+      viewCount: 0,
+      lastViewedAt: null,
       experiments: insertAnalysis.experiments as any,
       tools: insertAnalysis.tools as any,
       summary: insertAnalysis.summary as any,
@@ -479,6 +493,39 @@ export class MemStorage implements IStorage {
     return Array.from(this.analyses.values()).sort(
       (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
     );
+  }
+
+  async incrementViewCount(id: string): Promise<Analysis | undefined> {
+    const analysis = this.analyses.get(id);
+    if (!analysis) return undefined;
+    
+    const updated: Analysis = {
+      ...analysis,
+      viewCount: analysis.viewCount + 1,
+      lastViewedAt: new Date()
+    };
+    this.analyses.set(id, updated);
+    return updated;
+  }
+
+  async updateAnalysisMetadata(id: string, metadata: {
+    label?: string;
+    tags?: string[];
+    isFavorite?: boolean;
+    notes?: string;
+  }): Promise<Analysis | undefined> {
+    const analysis = this.analyses.get(id);
+    if (!analysis) return undefined;
+    
+    const updated: Analysis = {
+      ...analysis,
+      ...(metadata.label !== undefined && { label: metadata.label }),
+      ...(metadata.tags !== undefined && { tags: metadata.tags }),
+      ...(metadata.isFavorite !== undefined && { isFavorite: metadata.isFavorite }),
+      ...(metadata.notes !== undefined && { notes: metadata.notes })
+    };
+    this.analyses.set(id, updated);
+    return updated;
   }
 
   // Tool methods

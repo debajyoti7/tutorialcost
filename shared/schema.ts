@@ -64,6 +64,16 @@ export const analyses = pgTable("analyses", {
   }>(),
   processingTime: integer("processing_time").notNull(), // in seconds
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  // Session tracking
+  sessionHash: text("session_hash"),
+  // View analytics
+  viewCount: integer("view_count").default(0).notNull(),
+  lastViewedAt: timestamp("last_viewed_at"),
+  // User organization
+  label: text("label"),
+  tags: jsonb("tags").$type<string[]>().default(sql`'[]'::jsonb`),
+  isFavorite: boolean("is_favorite").default(false).notNull(),
+  notes: text("notes"),
 });
 
 // Tool database for reference pricing and information
@@ -92,6 +102,8 @@ export const toolDatabase = pgTable("tool_database", {
 export const insertAnalysisSchema = createInsertSchema(analyses).omit({
   id: true,
   createdAt: true,
+  viewCount: true,
+  lastViewedAt: true,
 });
 
 export const insertToolSchema = createInsertSchema(toolDatabase).omit({
