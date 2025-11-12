@@ -853,7 +853,7 @@ export class DbStorage implements IStorage {
       if (existingTools.length === 0) {
         // Insert all tools
         for (const tool of commonTools) {
-          await this.db.insert(toolDatabase).values(tool).onConflictDoNothing();
+          await this.db.insert(toolDatabase).values(tool as any).onConflictDoNothing();
         }
       }
       this.toolsInitialized = true;
@@ -880,7 +880,7 @@ export class DbStorage implements IStorage {
 
   // Analysis methods
   async createAnalysis(insertAnalysis: InsertAnalysis): Promise<Analysis> {
-    const result = await this.db.insert(analyses).values(insertAnalysis).returning();
+    const result = await this.db.insert(analyses).values(insertAnalysis as any).returning();
     return result[0];
   }
 
@@ -931,7 +931,7 @@ export class DbStorage implements IStorage {
 
   // Tool methods
   async createTool(insertTool: InsertTool): Promise<Tool> {
-    const result = await this.db.insert(toolDatabase).values(insertTool).returning();
+    const result = await this.db.insert(toolDatabase).values(insertTool as any).returning();
     return result[0];
   }
 
@@ -958,7 +958,7 @@ export class DbStorage implements IStorage {
   async updateTool(id: string, updates: Partial<InsertTool>): Promise<Tool | undefined> {
     const result = await this.db
       .update(toolDatabase)
-      .set({ ...updates, updatedAt: new Date() })
+      .set({ ...updates, updatedAt: new Date() } as any)
       .where(eq(toolDatabase.id, id))
       .returning();
     return result[0];
