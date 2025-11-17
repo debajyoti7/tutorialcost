@@ -639,6 +639,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/analyses/random - Get a random analysis for "Try Example"
+  // IMPORTANT: This must come BEFORE /api/analyses/:id to avoid route conflict
+  app.get("/api/analyses/random", async (req, res) => {
+    try {
+      const allAnalyses = await storage.getAllAnalyses();
+      
+      if (allAnalyses.length === 0) {
+        return res.status(404).json({ error: 'No analyses available' });
+      }
+
+      // Get a random analysis
+      const randomAnalysis = allAnalyses[Math.floor(Math.random() * allAnalyses.length)];
+
+      res.json({
+        id: randomAnalysis.id,
+        title: randomAnalysis.title,
+        platform: randomAnalysis.platform,
+        experimentsCount: randomAnalysis.experiments.length,
+        toolsCount: randomAnalysis.tools.length,
+        summary: randomAnalysis.summary
+      });
+    } catch (error) {
+      console.error('Failed to get random analysis:', error);
+      res.status(500).json({ error: 'Failed to retrieve random analysis' });
+    }
+  });
+
   // GET /api/analyses/:id - Get specific analysis and increment view count
   app.get("/api/analyses/:id", async (req, res) => {
     try {

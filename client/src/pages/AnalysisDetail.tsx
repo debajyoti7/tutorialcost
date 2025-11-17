@@ -45,7 +45,7 @@ interface AnalysisDetailData {
 
 export default function AnalysisDetail() {
   const [, params] = useRoute("/analysis/:id");
-  const analysisId = params?.id;
+  const id = params?.id;
   const { toast } = useToast();
 
   const [isEditingMetadata, setIsEditingMetadata] = useState(false);
@@ -56,8 +56,8 @@ export default function AnalysisDetail() {
   const [editFavorite, setEditFavorite] = useState(false);
 
   const { data: analysis, isLoading } = useQuery<AnalysisDetailData>({
-    queryKey: ["/api/analyses", analysisId],
-    enabled: !!analysisId,
+    queryKey: ["/api/analyses", id],
+    enabled: !!id,
   });
 
   const updateMetadataMutation = useMutation({
@@ -67,10 +67,10 @@ export default function AnalysisDetail() {
       isFavorite?: boolean;
       notes?: string;
     }) => {
-      return apiRequest("PATCH", `/api/analyses/${analysisId}`, metadata);
+      return apiRequest("PATCH", `/api/analyses/${id}`, metadata);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/analyses", analysisId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analyses", id] });
       queryClient.invalidateQueries({ queryKey: ["/api/analyses"] });
       setIsEditingMetadata(false);
       toast({
@@ -89,10 +89,10 @@ export default function AnalysisDetail() {
 
   const toggleFavoriteMutation = useMutation({
     mutationFn: async (isFavorite: boolean) => {
-      return apiRequest("PATCH", `/api/analyses/${analysisId}`, { isFavorite });
+      return apiRequest("PATCH", `/api/analyses/${id}`, { isFavorite });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/analyses", analysisId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analyses", id] });
       queryClient.invalidateQueries({ queryKey: ["/api/analyses"] });
     },
   });
