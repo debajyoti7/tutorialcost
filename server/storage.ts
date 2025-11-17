@@ -15,6 +15,7 @@ export interface IStorage {
   // Analysis methods
   createAnalysis(analysis: InsertAnalysis): Promise<Analysis>;
   getAnalysis(id: string): Promise<Analysis | undefined>;
+  getAnalysisByShareId(shareId: string): Promise<Analysis | undefined>;
   getAnalysesByUrl(url: string): Promise<Analysis[]>;
   getAllAnalyses(): Promise<Analysis[]>;
   incrementViewCount(id: string): Promise<Analysis | undefined>;
@@ -24,6 +25,7 @@ export interface IStorage {
     isFavorite?: boolean;
     notes?: string;
   }): Promise<Analysis | undefined>;
+  generateShareId(id: string): Promise<Analysis | undefined>;
   
   // Tool database methods
   createTool(tool: InsertTool): Promise<Tool>;
@@ -487,6 +489,23 @@ export class MemStorage implements IStorage {
     return this.analyses.get(id);
   }
 
+  async getAnalysisByShareId(shareId: string): Promise<Analysis | undefined> {
+    return Array.from(this.analyses.values()).find(a => a.shareId === shareId);
+  }
+
+  async generateShareId(id: string): Promise<Analysis | undefined> {
+    const analysis = this.analyses.get(id);
+    if (!analysis) return undefined;
+    
+    if (!analysis.shareId) {
+      const shareId = randomUUID().slice(0, 12);
+      analysis.shareId = shareId;
+      this.analyses.set(id, analysis);
+    }
+    
+    return analysis;
+  }
+
   async getAnalysesByUrl(url: string): Promise<Analysis[]> {
     return Array.from(this.analyses.values()).filter(
       analysis => analysis.url === url
@@ -887,6 +906,28 @@ export class DbStorage implements IStorage {
   async getAnalysis(id: string): Promise<Analysis | undefined> {
     const result = await this.db.select().from(analyses).where(eq(analyses.id, id)).limit(1);
     return result[0];
+  }
+
+  async getAnalysisByShareId(shareId: string): Promise<Analysis | undefined> {
+    const result = await this.db.select().from(analyses).where(eq(analyses.shareId, shareId)).limit(1);
+    return result[0];
+  }
+
+  async generateShareId(id: string): Promise<Analysis | undefined> {
+    const analysis = await this.getAnalysis(id);
+    if (!analysis) return undefined;
+    
+    if (!analysis.shareId) {
+      const shareId = randomUUID().slice(0, 12);
+      const result = await this.db
+        .update(analyses)
+        .set({ shareId })
+        .where(eq(analyses.id, id))
+        .returning();
+      return result[0] as Analysis;
+    }
+    
+    return analysis;
   }
 
   async getAnalysesByUrl(url: string): Promise<Analysis[]> {

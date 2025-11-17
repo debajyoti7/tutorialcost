@@ -320,6 +320,7 @@ export default function AnalysisDetail() {
             summary: analysis.summary,
             processingTime: analysis.processingTime
           }}
+          analysisId={id}
         />
 
         {/* Notes Display (when not editing) */}

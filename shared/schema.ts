@@ -66,6 +66,8 @@ export const analyses = pgTable("analyses", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   // Session tracking
   sessionHash: text("session_hash"),
+  // Sharing
+  shareId: varchar("share_id").unique(),
   // View analytics
   viewCount: integer("view_count").default(0).notNull(),
   lastViewedAt: timestamp("last_viewed_at"),

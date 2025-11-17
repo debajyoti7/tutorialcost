@@ -95,9 +95,11 @@ export interface AnalysisData {
 interface AnalysisResultsProps {
   data: AnalysisData;
   onNewAnalysis?: () => void;
+  hideShareButton?: boolean;
+  analysisId?: string;
 }
 
-export default function AnalysisResults({ data, onNewAnalysis }: AnalysisResultsProps) {
+export default function AnalysisResults({ data, onNewAnalysis, hideShareButton = false, analysisId }: AnalysisResultsProps) {
   const { toast } = useToast();
   
   const getDifficultyColor = (difficulty: string) => {
@@ -227,41 +229,33 @@ export default function AnalysisResults({ data, onNewAnalysis }: AnalysisResults
 
   const handleShare = async () => {
     try {
-      const shareText = `Content Analysis Results: ${data.contentInfo.title}
-      
-Found ${data.experiments.length} LLM experiments and ${data.tools.length} tools with an estimated total cost of $${data.summary.totalCostMin}-$${data.summary.totalCostMax}/month (Tools: $${data.summary.toolSubscriptionCostMin}-$${data.summary.toolSubscriptionCostMax}, Infrastructure: $${data.summary.infrastructureCostMin}-$${data.summary.infrastructureCostMax}).
-
-Experiments:
-${data.experiments.map(exp => `• ${exp.title} (${exp.complexity} complexity)`).join('\n')}
-
-Key Tools:
-${data.tools.slice(0, 5).map(tool => `• ${tool.name} - ${tool.category}`).join('\n')}
-
-Analyzed with Content Analyzer for LLM Experiments`;
-
-      if (navigator.share) {
-        await navigator.share({
-          title: 'Content Analysis Results',
-          text: shareText,
-          url: window.location.href
-        });
-        
-        toast({
-          title: "Shared Successfully",
-          description: "Analysis results shared",
-        });
-      } else {
-        // Fallback to clipboard
-        await navigator.clipboard.writeText(shareText);
-        toast({
-          title: "Copied to Clipboard",
-          description: "Analysis summary copied to clipboard",
-        });
+      if (!analysisId) {
+        throw new Error('No analysis ID available for sharing');
       }
+
+      // Generate share ID via API
+      const response = await fetch(`/api/analyses/${analysisId}/share`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate share link');
+      }
+
+      const { shareUrl } = await response.json();
+
+      // Copy to clipboard
+      await navigator.clipboard.writeText(shareUrl);
+      
+      toast({
+        title: "Share Link Copied!",
+        description: "Anyone with this link can view your analysis",
+      });
     } catch (error) {
       toast({
         title: "Share Failed",
-        description: "Failed to share analysis results",
+        description: "Failed to generate shareable link",
         variant: "destructive",
       });
     }
@@ -287,15 +281,17 @@ Analyzed with Content Analyzer for LLM Experiments`;
               </CardDescription>
             </div>
             <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleShare}
-                data-testid="button-share"
-              >
-                <Share2 className="w-4 h-4 mr-2" />
-                Share
-              </Button>
+              {!hideShareButton && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleShare}
+                  data-testid="button-share"
+                >
+                  <Share2 className="w-4 h-4 mr-2" />
+                  Share
+                </Button>
+              )}
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

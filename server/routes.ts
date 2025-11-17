@@ -706,6 +706,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/analyses/:id/share - Generate share ID for analysis
+  app.post("/api/analyses/:id/share", async (req, res) => {
+    try {
+      const analysis = await storage.generateShareId(req.params.id);
+      if (!analysis) {
+        return res.status(404).json({ error: 'Analysis not found' });
+      }
+      
+      res.json({
+        shareId: analysis.shareId,
+        shareUrl: `${req.protocol}://${req.get('host')}/share/${analysis.shareId}`
+      });
+    } catch (error) {
+      console.error('Failed to generate share ID:', error);
+      res.status(500).json({ error: 'Failed to generate share link' });
+    }
+  });
+
+  // GET /api/share/:shareId - Get analysis by share ID (public route)
+  app.get("/api/share/:shareId", async (req, res) => {
+    try {
+      const analysis = await storage.getAnalysisByShareId(req.params.shareId);
+      if (!analysis) {
+        return res.status(404).json({ error: 'Shared analysis not found' });
+      }
+
+      // Increment view count
+      await storage.incrementViewCount(analysis.id);
+
+      res.json({
+        id: analysis.id,
+        contentInfo: {
+          title: analysis.title,
+          duration: analysis.duration,
+          platform: analysis.platform,
+          url: analysis.url
+        },
+        experiments: analysis.experiments,
+        tools: analysis.tools,
+        summary: analysis.summary,
+        processingTime: analysis.processingTime,
+        viewCount: analysis.viewCount,
+        label: analysis.label,
+        tags: analysis.tags,
+        createdAt: analysis.createdAt
+      });
+    } catch (error) {
+      console.error('Failed to get shared analysis:', error);
+      res.status(500).json({ error: 'Failed to retrieve shared analysis' });
+    }
+  });
+
   // GET /api/tools - Get all tools in database
   app.get("/api/tools", async (req, res) => {
     try {
