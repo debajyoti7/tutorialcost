@@ -175,6 +175,7 @@ function SuggestedVideosCarousel() {
 export default function Home() {
   const [state, setState] = useState<AppState>('input');
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
+  const [analysisId, setAnalysisId] = useState<string | null>(null);
   const [errorData, setErrorData] = useState<ErrorData | null>(null);
   const [lastUrl, setLastUrl] = useState<string>('');
   const { toast } = useToast();
@@ -197,6 +198,7 @@ export default function Home() {
         processingTime: result.processingTime
       };
       
+      setAnalysisId(result.id);
       setAnalysisData(analysisData);
       setState('results');
       
@@ -239,6 +241,7 @@ export default function Home() {
   const handleNewAnalysis = () => {
     setState('input');
     setAnalysisData(null);
+    setAnalysisId(null);
     setErrorData(null);
     setLastUrl('');
   };
@@ -272,6 +275,7 @@ export default function Home() {
           <AnalysisResults 
             data={analysisData} 
             onNewAnalysis={handleNewAnalysis}
+            analysisId={analysisId || undefined}
           />
         )}
         

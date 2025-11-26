@@ -31,19 +31,43 @@ export interface AnalysisResponse {
       monthlyMax?: number;
       usage?: string;
       features: string[];
+      priceType?: 'fixed' | 'usage-based' | 'per-token' | 'free';
+      tierName?: string;
+      pricingSource?: 'database' | 'ai-estimated';
+      allTiers?: {
+        tier: string;
+        monthlyMin: number;
+        monthlyMax?: number;
+        priceType: string;
+        usage?: string;
+      }[];
     };
     difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
     timeToImplement: string;
     url: string;
     mentioned: string[];
+    suggestedContext?: string;
   }[];
   summary: {
     totalExperiments: number;
     totalToolsRequired: number;
-    overallCostRangeMin: number;
-    overallCostRangeMax: number;
+    toolSubscriptionCostMin: number;
+    toolSubscriptionCostMax: number;
+    infrastructureCostMin: number;
+    infrastructureCostMax: number;
+    infrastructureBreakdown: Array<{
+      toolName: string;
+      component: string;
+      description: string;
+      costMin: number;
+      costMax: number;
+    }>;
+    totalCostMin: number;
+    totalCostMax: number;
     implementationTimeEstimate: string;
     difficultyLevel: 'Low' | 'Medium' | 'High';
+    costClassification?: 'Free' | 'Low' | 'Medium' | 'High';
+    costClassificationLabel?: string;
   };
   processingTime: number;
 }
