@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { extractYouTubeContent, extractPodcastContent, detectPlatform, validateUrl } from "./contentExtractor";
 import { analyzeContentForLLMExperiments } from "./gemini";
-import { insertAnalysisSchema } from "@shared/schema";
+import { insertAnalysisSchema, insertFeedbackSchema } from "@shared/schema";
 import { z } from "zod";
 import { AnalysisError, createNoExperimentsError, createInvalidUrlError, createUnsupportedPlatformError } from "./errors";
 import { createHmac } from "crypto";
@@ -794,6 +794,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Failed to get tools:', error);
       res.status(500).json({ error: 'Failed to retrieve tools' });
+    }
+  });
+
+  // POST /api/feedback - Submit feedback on analysis, experiment, or tool
+  app.post("/api/feedback", async (req, res) => {
+    try {
+      // Validate request body
+      const validatedData = insertFeedbackSchema.parse(req.body);
+      
+      // Hash session ID for privacy
+      const sessionHash = req.sessionID ? hashSessionId(req.sessionID) : null;
+      
+      // Create feedback with session hash
+      const feedbackData = {
+        ...validatedData,
+        sessionHash
+      };
+      
+      const newFeedback = await storage.createFeedback(feedbackData);
+      
+      res.status(201).json({
+        id: newFeedback.id,
+        success: true
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: 'Invalid feedback data', details: error.errors });
+      }
+      console.error('Failed to create feedback:', error);
+      res.status(500).json({ error: 'Failed to submit feedback' });
     }
   });
 
