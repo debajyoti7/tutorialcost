@@ -1,8 +1,8 @@
-import { type User, type InsertUser, type Analysis, type InsertAnalysis, type Tool, type InsertTool } from "@shared/schema";
+import { type User, type InsertUser, type Analysis, type InsertAnalysis, type Tool, type InsertTool, type Feedback, type InsertFeedback } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { analyses, toolDatabase, users } from "@shared/schema";
+import { analyses, toolDatabase, users, feedback } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 
 // Storage interface for the content analyzer
@@ -33,17 +33,22 @@ export interface IStorage {
   getAllTools(): Promise<Tool[]>;
   searchTools(category?: string): Promise<Tool[]>;
   updateTool(id: string, updates: Partial<InsertTool>): Promise<Tool | undefined>;
+  
+  // Feedback methods
+  createFeedback(feedbackData: InsertFeedback): Promise<Feedback>;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
   private analyses: Map<string, Analysis>;
   private tools: Map<string, Tool>;
+  private feedbacks: Map<string, Feedback>;
 
   constructor() {
     this.users = new Map();
     this.analyses = new Map();
     this.tools = new Map();
+    this.feedbacks = new Map();
     
     // Initialize with some common tools
     this.initializeToolDatabase();
@@ -595,6 +600,16 @@ export class MemStorage implements IStorage {
     this.tools.set(id, updatedTool);
     return updatedTool;
   }
+
+  async createFeedback(feedbackData: InsertFeedback): Promise<Feedback> {
+    const newFeedback: Feedback = {
+      id: randomUUID(),
+      ...feedbackData,
+      createdAt: new Date()
+    };
+    this.feedbacks.set(newFeedback.id, newFeedback);
+    return newFeedback;
+  }
 }
 
 // Database storage implementation using Drizzle ORM
@@ -1001,6 +1016,14 @@ export class DbStorage implements IStorage {
       .update(toolDatabase)
       .set({ ...updates, updatedAt: new Date() } as any)
       .where(eq(toolDatabase.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async createFeedback(feedbackData: InsertFeedback): Promise<Feedback> {
+    const result = await this.db
+      .insert(feedback)
+      .values(feedbackData)
       .returning();
     return result[0];
   }
