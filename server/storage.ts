@@ -478,6 +478,7 @@ export class MemStorage implements IStorage {
       tags: (insertAnalysis.tags as string[]) || [],
       isFavorite: insertAnalysis.isFavorite || false,
       notes: insertAnalysis.notes || null,
+      shareId: null,
       viewCount: 0,
       lastViewedAt: null,
       experiments: insertAnalysis.experiments as any,
@@ -605,6 +606,9 @@ export class MemStorage implements IStorage {
     const newFeedback: Feedback = {
       id: randomUUID(),
       ...feedbackData,
+      targetId: feedbackData.targetId ?? null,
+      comment: feedbackData.comment ?? null,
+      sessionHash: feedbackData.sessionHash ?? null,
       createdAt: new Date()
     };
     this.feedbacks.set(newFeedback.id, newFeedback);

@@ -147,6 +147,10 @@ export const feedback = pgTable("feedback", {
 export const insertFeedbackSchema = createInsertSchema(feedback).omit({
   id: true,
   createdAt: true,
+}).extend({
+  targetId: z.string().optional(),
+  comment: z.string().optional(),
+  sessionHash: z.string().optional(),
 });
 
 export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;

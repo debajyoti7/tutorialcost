@@ -804,7 +804,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertFeedbackSchema.parse(req.body);
       
       // Hash session ID for privacy
-      const sessionHash = req.sessionID ? hashSessionId(req.sessionID) : null;
+      const sessionHash = req.sessionID ? hashSessionId(req.sessionID) : undefined;
       
       // Create feedback with session hash
       const feedbackData = {
