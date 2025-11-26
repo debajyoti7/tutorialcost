@@ -131,3 +131,23 @@ export const insertUserSchema = createInsertSchema(users).pick({
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+// Feedback table for user ratings on analyses, experiments, and tools
+export const feedback = pgTable("feedback", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  analysisId: varchar("analysis_id").notNull().references(() => analyses.id, { onDelete: 'cascade' }),
+  feedbackType: text("feedback_type").notNull(), // 'overall' | 'experiment' | 'tool'
+  targetId: text("target_id"), // experiment index (e.g., '0', '1') or tool name
+  sentiment: text("sentiment").notNull(), // 'positive' | 'negative'
+  comment: text("comment"),
+  sessionHash: text("session_hash"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertFeedbackSchema = createInsertSchema(feedback).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;
+export type Feedback = typeof feedback.$inferSelect;
