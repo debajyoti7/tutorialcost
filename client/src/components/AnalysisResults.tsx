@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import { FeedbackButton } from "@/components/FeedbackButton";
 import { 
   ExternalLink, 
   DollarSign, 
@@ -345,6 +346,18 @@ export default function AnalysisResults({ data, onNewAnalysis, hideShareButton =
               )}
             </div>
           </div>
+          
+          {analysisId && (
+            <div className="mt-4 pt-4 border-t flex items-center justify-center gap-2">
+              <span className="text-sm text-muted-foreground">Was this analysis helpful?</span>
+              <FeedbackButton 
+                analysisId={analysisId} 
+                feedbackType="overall"
+                variant="ghost"
+                size="sm"
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -356,14 +369,25 @@ export default function AnalysisResults({ data, onNewAnalysis, hideShareButton =
             LLM Experiments
           </h2>
           <div className="space-y-4">
-            {data.experiments.map((experiment) => (
+            {data.experiments.map((experiment, index) => (
               <Card key={experiment.id} className="hover-elevate">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
-                    <CardTitle className="text-lg">{experiment.title}</CardTitle>
-                    <Badge className={getComplexityColor(experiment.complexity)}>
-                      {experiment.complexity}
-                    </Badge>
+                    <div className="flex-1">
+                      <CardTitle className="text-lg">{experiment.title}</CardTitle>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {analysisId && (
+                        <FeedbackButton 
+                          analysisId={analysisId} 
+                          feedbackType="experiment"
+                          targetId={index.toString()}
+                        />
+                      )}
+                      <Badge className={getComplexityColor(experiment.complexity)}>
+                        {experiment.complexity}
+                      </Badge>
+                    </div>
                   </div>
                   <CardDescription>{experiment.description}</CardDescription>
                 </CardHeader>
@@ -403,7 +427,7 @@ export default function AnalysisResults({ data, onNewAnalysis, hideShareButton =
               <Card key={tool.id} className="hover-elevate">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
-                    <div className="space-y-1">
+                    <div className="space-y-1 flex-1">
                       <CardTitle className="text-lg flex items-center gap-2">
                         {tool.name}
                         <a 
@@ -423,6 +447,13 @@ export default function AnalysisResults({ data, onNewAnalysis, hideShareButton =
                         </Badge>
                       </div>
                     </div>
+                    {analysisId && (
+                      <FeedbackButton 
+                        analysisId={analysisId} 
+                        feedbackType="tool"
+                        targetId={tool.name}
+                      />
+                    )}
                     <div className="text-right space-y-1">
                       {/* Two-line pricing hierarchy: free tier first, optional paid second */}
                       {tool.pricing.free ? (
