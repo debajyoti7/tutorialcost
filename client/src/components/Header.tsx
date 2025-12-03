@@ -1,4 +1,4 @@
-import { Brain, Archive, Sparkles } from "lucide-react";
+import { Brain, Archive, Sparkles, Chrome } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
@@ -35,6 +35,20 @@ export default function Header() {
               <Sparkles className="w-4 h-4 text-primary" />
               <span className="text-sm font-medium text-foreground">Powered by Good Vibes</span>
             </div>
+            
+            <Link href="/extension">
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button 
+                  variant={location === "/extension" ? "default" : "outline"} 
+                  size="default"
+                  className="gap-2"
+                  data-testid="button-extension"
+                >
+                  <Chrome className="h-4 w-4" />
+                  <span className="hidden sm:inline">Extension</span>
+                </Button>
+              </motion.div>
+            </Link>
             
             <Link href="/archive">
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>

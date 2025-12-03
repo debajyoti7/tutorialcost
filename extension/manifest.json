@@ -5,7 +5,9 @@
   "description": "Analyze YouTube videos to discover LLM experiments, tools, and implementation costs",
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "tabs",
+    "scripting"
   ],
   "host_permissions": [
     "https://www.youtube.com/*",

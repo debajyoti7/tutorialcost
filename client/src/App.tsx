@@ -8,6 +8,7 @@ import Home from "@/pages/Home";
 import Archive from "@/pages/Archive";
 import AnalysisDetail from "@/pages/AnalysisDetail";
 import SharePage from "@/pages/SharePage";
+import Extension from "@/pages/Extension";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -15,6 +16,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/archive" component={Archive} />
+      <Route path="/extension" component={Extension} />
       <Route path="/analysis/:id" component={AnalysisDetail} />
       <Route path="/share/:shareId" component={SharePage} />
       <Route component={NotFound} />
