@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Content Analyzer</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="logo">
+        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+        </svg>
+        <span class="logo-text">Content Analyzer</span>
+      </div>
+    </header>
+
+    <main class="main">
+      <div id="not-youtube" class="state-container hidden">
+        <div class="state-icon warning">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+        </div>
+        <h2>Not a YouTube Page</h2>
+        <p>Navigate to a YouTube video to analyze its content.</p>
+        <a href="https://www.youtube.com" target="_blank" class="btn btn-secondary">
+          Go to YouTube
+        </a>
+      </div>
+
+      <div id="video-detected" class="state-container hidden">
+        <div class="video-info">
+          <div class="video-thumbnail">
+            <img id="video-thumbnail" src="" alt="Video thumbnail">
+          </div>
+          <div class="video-details">
+            <h3 id="video-title">Loading...</h3>
+            <p id="video-channel" class="video-channel"></p>
+          </div>
+        </div>
+        <button id="analyze-btn" class="btn btn-primary">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+          Analyze Content
+        </button>
+      </div>
+
+      <div id="loading" class="state-container hidden">
+        <div class="loader">
+          <div class="loader-spinner"></div>
+        </div>
+        <h2>Analyzing Content</h2>
+        <p id="loading-message">Extracting transcript and identifying experiments...</p>
+      </div>
+
+      <div id="results" class="state-container hidden">
+        <div class="results-header">
+          <h2>Analysis Complete</h2>
+          <div class="results-summary">
+            <div class="stat">
+              <span class="stat-value" id="experiments-count">0</span>
+              <span class="stat-label">Experiments</span>
+            </div>
+            <div class="stat">
+              <span class="stat-value" id="tools-count">0</span>
+              <span class="stat-label">Tools</span>
+            </div>
+            <div class="stat cost">
+              <span class="stat-value" id="cost-range">$0</span>
+              <span class="stat-label">Est. Monthly</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="experiments-preview">
+          <h3>Experiments Found</h3>
+          <ul id="experiments-list" class="experiments-list"></ul>
+        </div>
+
+        <div class="tools-preview">
+          <h3>Tools Required</h3>
+          <div id="tools-list" class="tools-badges"></div>
+        </div>
+
+        <div class="actions">
+          <button id="view-full-btn" class="btn btn-primary">
+            View Full Analysis
+          </button>
+          <button id="new-analysis-btn" class="btn btn-secondary">
+            New Analysis
+          </button>
+        </div>
+      </div>
+
+      <div id="error" class="state-container hidden">
+        <div class="state-icon error">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="15" y1="9" x2="9" y2="15"/>
+            <line x1="9" y1="9" x2="15" y2="15"/>
+          </svg>
+        </div>
+        <h2>Analysis Failed</h2>
+        <p id="error-message">Something went wrong. Please try again.</p>
+        <button id="retry-btn" class="btn btn-primary">
+          Try Again
+        </button>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <a href="#" id="open-webapp" class="footer-link">Open Web App</a>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
