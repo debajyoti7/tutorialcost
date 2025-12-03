@@ -10,7 +10,21 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Link as LinkIcon, Youtube, Podcast, Sparkles, DollarSign, Clock, Layers, AlertCircle, CheckCircle2, XCircle, Zap, Target } from "lucide-react";
+import {
+  Loader2,
+  Link as LinkIcon,
+  Youtube,
+  Podcast,
+  Sparkles,
+  DollarSign,
+  Clock,
+  Layers,
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+  Zap,
+  Target,
+} from "lucide-react";
 
 interface InputFormProps {
   onAnalyze: (url: string) => void;
@@ -95,7 +109,7 @@ export default function InputForm({
         {/* Animated background pattern */}
         <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:50px_50px]" />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
-        
+
         {/* Floating gradient orbs */}
         <motion.div
           className="absolute top-20 left-20 w-72 h-72 bg-primary/20 rounded-full blur-3xl"
@@ -106,7 +120,7 @@ export default function InputForm({
           transition={{
             duration: 8,
             repeat: Infinity,
-            ease: "easeInOut"
+            ease: "easeInOut",
           }}
         />
         <motion.div
@@ -118,7 +132,7 @@ export default function InputForm({
           transition={{
             duration: 10,
             repeat: Infinity,
-            ease: "easeInOut"
+            ease: "easeInOut",
           }}
         />
 
@@ -131,7 +145,9 @@ export default function InputForm({
           >
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 backdrop-blur-sm border border-primary/20 rounded-full mb-6">
               <Zap className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium text-foreground">Powered by Gemini AI</span>
+              <span className="text-sm font-medium text-foreground">
+                Powered by Good Vibes
+              </span>
             </div>
           </motion.div>
 
@@ -154,8 +170,8 @@ export default function InputForm({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
-            Extract AI experiments, discover required tools, and get accurate cost breakdowns 
-            from YouTube tutorials and tech talks—all in seconds
+            Extract AI experiments, discover required tools, and get accurate
+            cost breakdowns from YouTube tutorials and tech talks—all in seconds
           </motion.p>
         </div>
       </div>
@@ -166,27 +182,31 @@ export default function InputForm({
           {
             icon: Sparkles,
             title: "AI-Powered Extraction",
-            description: "Identifies LLM experiments with timestamps and descriptions",
-            delay: 0.1
+            description:
+              "Identifies LLM experiments with timestamps and descriptions",
+            delay: 0.1,
           },
           {
             icon: Layers,
             title: "Tool Discovery",
-            description: "Lists all mentioned tools with detailed feature breakdowns",
-            delay: 0.2
+            description:
+              "Lists all mentioned tools with detailed feature breakdowns",
+            delay: 0.2,
           },
           {
             icon: DollarSign,
             title: "Smart Pricing",
-            description: "Context-aware tier selection with free and paid options",
-            delay: 0.3
+            description:
+              "Context-aware tier selection with free and paid options",
+            delay: 0.3,
           },
           {
             icon: Clock,
             title: "Time Estimates",
-            description: "Implementation difficulty and time-to-build projections",
-            delay: 0.4
-          }
+            description:
+              "Implementation difficulty and time-to-build projections",
+            delay: 0.4,
+          },
         ].map((feature, index) => (
           <motion.div
             key={feature.title}
@@ -198,7 +218,7 @@ export default function InputForm({
             <Card className="relative overflow-hidden border-border/50 bg-card/80 backdrop-blur-sm hover-elevate">
               {/* Gradient border effect */}
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-              
+
               <CardContent className="pt-6 relative z-10">
                 <div className="flex items-start gap-3">
                   <motion.div
@@ -209,7 +229,9 @@ export default function InputForm({
                     <feature.icon className="w-5 h-5 text-primary" />
                   </motion.div>
                   <div>
-                    <h3 className="font-semibold text-foreground mb-1.5">{feature.title}</h3>
+                    <h3 className="font-semibold text-foreground mb-1.5">
+                      {feature.title}
+                    </h3>
                     <p className="text-sm text-muted-foreground leading-relaxed">
                       {feature.description}
                     </p>
@@ -230,7 +252,7 @@ export default function InputForm({
       >
         {/* Gradient border wrapper */}
         <div className="absolute -inset-0.5 bg-gradient-to-r from-primary via-emerald-500 to-primary rounded-2xl blur opacity-30"></div>
-        
+
         <Card className="relative border-border/50 bg-card/95 backdrop-blur-xl shadow-2xl">
           <CardHeader className="text-center pb-6 space-y-2">
             <motion.div
@@ -258,7 +280,11 @@ export default function InputForm({
                     <motion.div
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 500,
+                        damping: 25,
+                      }}
                     >
                       <Badge variant="outline" className="ml-auto gap-1">
                         {urlType === "youtube" ? (
@@ -294,7 +320,10 @@ export default function InputForm({
                     className="space-y-2"
                   >
                     {errors.map((error, index) => (
-                      <div key={index} className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg">
+                      <div
+                        key={index}
+                        className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg"
+                      >
                         <AlertCircle className="w-4 h-4" />
                         {error}
                       </div>
@@ -304,7 +333,11 @@ export default function InputForm({
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 pt-2">
-                <motion.div className="flex-1" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <motion.div
+                  className="flex-1"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
                   <Button
                     type="submit"
                     size="lg"
@@ -396,25 +429,36 @@ export default function InputForm({
             <div className="flex items-start gap-2">
               <div className="w-1.5 h-1.5 bg-primary rounded-full mt-2" />
               <p className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">LLM Experiment Analyzer</span> - Extracts AI/automation experiments from technical content
+                <span className="font-medium text-foreground">
+                  LLM Experiment Analyzer
+                </span>{" "}
+                - Extracts AI/automation experiments from technical content
               </p>
             </div>
             <div className="flex items-start gap-2">
               <div className="w-1.5 h-1.5 bg-primary rounded-full mt-2" />
               <p className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">Cost Estimator</span> - Provides accurate pricing for tools with context-aware tier recommendations
+                <span className="font-medium text-foreground">
+                  Cost Estimator
+                </span>{" "}
+                - Provides accurate pricing for tools with context-aware tier
+                recommendations
               </p>
             </div>
             <div className="flex items-start gap-2">
               <div className="w-1.5 h-1.5 bg-primary rounded-full mt-2" />
               <p className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">Implementation Guide</span> - Estimates difficulty levels and time requirements
+                <span className="font-medium text-foreground">
+                  Implementation Guide
+                </span>{" "}
+                - Estimates difficulty levels and time requirements
               </p>
             </div>
             <div className="flex items-start gap-2">
               <div className="w-1.5 h-1.5 bg-primary rounded-full mt-2" />
               <p className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">Best for</span> - AI tutorials, automation workflows, LLM demos, and tech talks
+                <span className="font-medium text-foreground">Best for</span> -
+                AI tutorials, automation workflows, LLM demos, and tech talks
               </p>
             </div>
           </CardContent>
@@ -431,25 +475,38 @@ export default function InputForm({
             <div className="flex items-start gap-2">
               <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full mt-2" />
               <p className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">General Transcription</span> - Not a video-to-text converter
+                <span className="font-medium text-foreground">
+                  General Transcription
+                </span>{" "}
+                - Not a video-to-text converter
               </p>
             </div>
             <div className="flex items-start gap-2">
               <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full mt-2" />
               <p className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">Universal Content Analyzer</span> - Requires transcript availability (YouTube only)
+                <span className="font-medium text-foreground">
+                  Universal Content Analyzer
+                </span>{" "}
+                - Requires transcript availability (YouTube only)
               </p>
             </div>
             <div className="flex items-start gap-2">
               <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full mt-2" />
               <p className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">Entertainment Content</span> - Won't extract useful data from non-technical videos
+                <span className="font-medium text-foreground">
+                  Entertainment Content
+                </span>{" "}
+                - Won't extract useful data from non-technical videos
               </p>
             </div>
             <div className="flex items-start gap-2">
               <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full mt-2" />
               <p className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">Guaranteed Results</span> - Content must mention specific LLM experiments or automation tools
+                <span className="font-medium text-foreground">
+                  Guaranteed Results
+                </span>{" "}
+                - Content must mention specific LLM experiments or automation
+                tools
               </p>
             </div>
           </CardContent>

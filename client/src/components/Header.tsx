@@ -33,7 +33,7 @@ export default function Header() {
           <nav className="flex items-center gap-3">
             <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-primary/5 to-emerald-500/5 rounded-full border border-primary/10">
               <Sparkles className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium text-foreground">Powered by Gemini</span>
+              <span className="text-sm font-medium text-foreground">Powered by Good Vibes</span>
             </div>
             
             <Link href="/archive">
