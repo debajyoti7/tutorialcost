@@ -99,7 +99,7 @@ export default function Extension() {
                 Analyze Videos Anywhere
               </h1>
               <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                Get the Content Analyzer Chrome extension and analyze YouTube videos 
+                Get the Tutorial Cost Chrome extension and analyze YouTube videos 
                 directly from your browser without leaving the page.
               </p>
             </div>
@@ -198,7 +198,7 @@ export default function Extension() {
                 <div className="mt-8 p-4 bg-muted/50 rounded-lg">
                   <p className="text-sm text-muted-foreground">
                     <strong className="text-foreground">Note:</strong> After installation, 
-                    you'll see the Content Analyzer icon in your browser toolbar. 
+                    you'll see the Tutorial Cost icon in your browser toolbar. 
                     Navigate to any YouTube video and click the icon to analyze it.
                   </p>
                 </div>

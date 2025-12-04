@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://content-analyzer.replit.app';
+const API_BASE_URL = 'https://tutorialcost.replit.app';
 
 let currentVideoUrl = null;
 let currentAnalysisId = null;

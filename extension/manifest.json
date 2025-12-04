@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Content Analyzer",
+  "name": "Tutorial Cost",
   "version": "1.0.0",
-  "description": "Analyze YouTube videos to discover LLM experiments, tools, and implementation costs",
+  "description": "Analyze YouTube tutorials to discover LLM experiments, tools, and implementation costs",
   "permissions": [
     "activeTab",
     "storage",

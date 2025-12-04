@@ -21,7 +21,7 @@ export default function Header() {
               </div>
               <div>
                 <h1 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
-                  Content Analyzer
+                  Tutorial Cost
                 </h1>
                 <p className="text-xs text-muted-foreground hidden sm:block">
                   AI-powered experiment extraction
