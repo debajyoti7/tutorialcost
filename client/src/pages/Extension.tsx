@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import Header from "@/components/Header";
 import ThemeToggle from "@/components/ThemeToggle";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -11,10 +11,10 @@ import {
   Youtube, 
   MousePointer, 
   BarChart3,
-  CheckCircle,
-  ArrowRight,
   ExternalLink
 } from "lucide-react";
+
+const CHROME_STORE_URL = "https://chromewebstore.google.com/detail/lfgjflkhemomgiojmkiicijlmheocmng";
 
 const features = [
   {
@@ -39,43 +39,24 @@ const features = [
   }
 ];
 
-const installSteps = [
-  {
-    step: 1,
-    title: "Download the Extension",
-    description: "Click the download button to get the extension files"
-  },
-  {
-    step: 2,
-    title: "Open Chrome Extensions",
-    description: "Go to chrome://extensions in your browser"
-  },
-  {
-    step: 3,
-    title: "Enable Developer Mode",
-    description: "Toggle 'Developer mode' in the top right corner"
-  },
-  {
-    step: 4,
-    title: "Load Extension",
-    description: "Click 'Load unpacked' and select the downloaded folder"
-  }
-];
-
 export default function Extension() {
-  const handleDownload = () => {
+  const handleInstall = () => {
+    window.open(CHROME_STORE_URL, '_blank');
+  };
+
+  const handleDevDownload = () => {
     window.location.href = '/api/extension/download';
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Header />
       
       <div className="fixed top-4 right-4 z-50">
         <ThemeToggle />
       </div>
 
-      <main className="container mx-auto px-4 py-12">
+      <main className="container mx-auto px-4 py-12 flex-1">
         <div className="max-w-4xl mx-auto space-y-12">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -111,13 +92,13 @@ export default function Extension() {
             >
               <Button 
                 size="lg" 
-                onClick={handleDownload}
+                onClick={handleInstall}
                 className="gap-3 text-lg px-8 py-6"
-                data-testid="button-download-extension"
+                data-testid="button-install-extension"
               >
-                <Download className="h-5 w-5" />
-                Download Extension
-                <ArrowRight className="h-5 w-5" />
+                <Chrome className="h-5 w-5" />
+                Install from Chrome Web Store
+                <ExternalLink className="h-5 w-5" />
               </Button>
             </motion.div>
           </motion.div>
@@ -162,74 +143,52 @@ export default function Extension() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-          >
-            <Card className="border-primary/20 bg-card/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-emerald" />
-                  Installation Guide
-                </CardTitle>
-                <CardDescription>
-                  Follow these steps to install the extension in Chrome
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  {installSteps.map((step, index) => (
-                    <div 
-                      key={step.step} 
-                      className="flex items-start gap-4"
-                    >
-                      <div className="flex-shrink-0 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold text-sm">
-                        {step.step}
-                      </div>
-                      <div className="flex-1 pt-1">
-                        <h4 className="font-medium text-foreground">
-                          {step.title}
-                        </h4>
-                        <p className="text-sm text-muted-foreground">
-                          {step.description}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-8 p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground">
-                    <strong className="text-foreground">Note:</strong> After installation, 
-                    you'll see the Tutorial Cost icon in your browser toolbar. 
-                    Navigate to any YouTube video and click the icon to analyze it.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
             className="text-center"
           >
             <Card className="bg-gradient-to-r from-primary/5 to-emerald/5 border-primary/10">
               <CardContent className="p-8">
                 <h3 className="text-xl font-bold mb-2">
-                  Coming Soon: Chrome Web Store
+                  How It Works
                 </h3>
-                <p className="text-muted-foreground mb-4">
-                  We're working on getting the extension approved on the Chrome Web Store 
-                  for even easier installation.
-                </p>
-                <Button variant="outline" disabled className="gap-2">
-                  <ExternalLink className="h-4 w-4" />
-                  Chrome Web Store (Coming Soon)
-                </Button>
+                <div className="text-muted-foreground space-y-2 text-left max-w-md mx-auto">
+                  <p className="flex items-start gap-3">
+                    <span className="flex-shrink-0 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold">1</span>
+                    <span>Install the extension from Chrome Web Store</span>
+                  </p>
+                  <p className="flex items-start gap-3">
+                    <span className="flex-shrink-0 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold">2</span>
+                    <span>Navigate to any YouTube tutorial video</span>
+                  </p>
+                  <p className="flex items-start gap-3">
+                    <span className="flex-shrink-0 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold">3</span>
+                    <span>Click the extension icon and hit "Analyze"</span>
+                  </p>
+                  <p className="flex items-start gap-3">
+                    <span className="flex-shrink-0 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold">4</span>
+                    <span>Get instant cost breakdowns and tool lists</span>
+                  </p>
+                </div>
               </CardContent>
             </Card>
           </motion.div>
         </div>
       </main>
+
+      <footer className="border-t border-border/50 py-6 mt-auto">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
+            <p>Tutorial Cost - Analyze YouTube tutorials for implementation costs</p>
+            <button
+              onClick={handleDevDownload}
+              className="flex items-center gap-2 hover:text-foreground transition-colors"
+              data-testid="link-dev-download"
+            >
+              <Download className="h-4 w-4" />
+              Developer: Download unpacked extension
+            </button>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

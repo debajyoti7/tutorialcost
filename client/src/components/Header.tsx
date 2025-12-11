@@ -45,7 +45,7 @@ export default function Header() {
                   data-testid="button-extension"
                 >
                   <Chrome className="h-4 w-4" />
-                  <span className="hidden sm:inline">Extension</span>
+                  <span className="hidden sm:inline">Get Extension</span>
                 </Button>
               </motion.div>
             </Link>
