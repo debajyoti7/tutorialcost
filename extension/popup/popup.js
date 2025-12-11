@@ -1,7 +1,9 @@
 const API_BASE_URL = 'https://tutorialcost.replit.app';
 
 let currentVideoUrl = null;
+let currentVideoId = null;
 let currentAnalysisId = null;
+let statusCheckInterval = null;
 
 const states = {
   notYoutube: document.getElementById('not-youtube'),
@@ -63,45 +65,62 @@ async function getVideoInfo(tab) {
   }
 }
 
-async function analyzeVideo(url) {
+function startAnalysis() {
+  // Send message to background worker to start analysis
+  chrome.runtime.sendMessage({
+    type: 'START_ANALYSIS',
+    url: currentVideoUrl,
+    videoId: currentVideoId
+  });
+  
   showState('loading');
+  startStatusCheck();
+}
+
+function startStatusCheck() {
+  // Clear any existing interval
+  if (statusCheckInterval) {
+    clearInterval(statusCheckInterval);
+  }
   
-  const messages = [
-    'Extracting video transcript...',
-    'Identifying LLM experiments...',
-    'Analyzing tool requirements...',
-    'Calculating implementation costs...'
-  ];
-  
-  let messageIndex = 0;
-  const messageInterval = setInterval(() => {
-    messageIndex = (messageIndex + 1) % messages.length;
-    document.getElementById('loading-message').textContent = messages[messageIndex];
-  }, 2500);
-  
+  // Check status immediately and then every 500ms
+  checkStatus();
+  statusCheckInterval = setInterval(checkStatus, 500);
+}
+
+function stopStatusCheck() {
+  if (statusCheckInterval) {
+    clearInterval(statusCheckInterval);
+    statusCheckInterval = null;
+  }
+}
+
+async function checkStatus() {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/analyze`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ url })
+    const state = await new Promise((resolve) => {
+      chrome.runtime.sendMessage({ type: 'GET_STATUS' }, (response) => {
+        resolve(response);
+      });
     });
     
-    clearInterval(messageInterval);
+    if (!state) return;
     
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Analysis failed');
+    // Only process if it's for the current video
+    if (state.videoId !== currentVideoId) return;
+    
+    if (state.status === 'loading') {
+      showState('loading');
+      document.getElementById('loading-message').textContent = state.message || 'Analyzing...';
+    } else if (state.status === 'success') {
+      stopStatusCheck();
+      displayResults(state.data);
+    } else if (state.status === 'error') {
+      stopStatusCheck();
+      showState('error');
+      document.getElementById('error-message').textContent = state.error || 'Analysis failed';
     }
-    
-    const data = await response.json();
-    displayResults(data);
-    
-  } catch (error) {
-    clearInterval(messageInterval);
-    showState('error');
-    document.getElementById('error-message').textContent = error.message;
+  } catch (e) {
+    console.error('Error checking status:', e);
   }
 }
 
@@ -166,7 +185,32 @@ async function init() {
   }
   
   currentVideoUrl = tab.url;
+  currentVideoId = videoId;
   
+  // Check if there's an existing analysis state for this video
+  const state = await new Promise((resolve) => {
+    chrome.runtime.sendMessage({ type: 'GET_STATUS' }, (response) => {
+      resolve(response);
+    });
+  });
+  
+  if (state && state.videoId === videoId) {
+    if (state.status === 'loading') {
+      showState('loading');
+      document.getElementById('loading-message').textContent = state.message || 'Analyzing...';
+      startStatusCheck();
+      return;
+    } else if (state.status === 'success') {
+      displayResults(state.data);
+      return;
+    } else if (state.status === 'error') {
+      showState('error');
+      document.getElementById('error-message').textContent = state.error || 'Analysis failed';
+      return;
+    }
+  }
+  
+  // No existing state, show video detected UI
   const videoInfo = await getVideoInfo(tab);
   
   document.getElementById('video-thumbnail').src = getVideoThumbnail(videoId);
@@ -178,18 +222,26 @@ async function init() {
 
 document.getElementById('analyze-btn')?.addEventListener('click', () => {
   if (currentVideoUrl) {
-    analyzeVideo(currentVideoUrl);
+    // Clear any previous state for this video before starting new analysis
+    chrome.runtime.sendMessage({ type: 'CLEAR_ANALYSIS' }, () => {
+      startAnalysis();
+    });
   }
 });
 
 document.getElementById('retry-btn')?.addEventListener('click', () => {
   if (currentVideoUrl) {
-    analyzeVideo(currentVideoUrl);
+    chrome.runtime.sendMessage({ type: 'CLEAR_ANALYSIS' }, () => {
+      startAnalysis();
+    });
   }
 });
 
 document.getElementById('new-analysis-btn')?.addEventListener('click', () => {
-  init();
+  // Clear the analysis state and reinitialize
+  chrome.runtime.sendMessage({ type: 'CLEAR_ANALYSIS' }, () => {
+    init();
+  });
 });
 
 document.getElementById('view-full-btn')?.addEventListener('click', () => {
@@ -201,6 +253,11 @@ document.getElementById('view-full-btn')?.addEventListener('click', () => {
 document.getElementById('open-webapp')?.addEventListener('click', (e) => {
   e.preventDefault();
   chrome.tabs.create({ url: API_BASE_URL });
+});
+
+// Clean up interval when popup closes
+window.addEventListener('unload', () => {
+  stopStatusCheck();
 });
 
 init();
