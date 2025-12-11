@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Tutorial Cost",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Analyze YouTube tutorials to discover LLM experiments, tools, and implementation costs",
   "permissions": [
     "activeTab",
@@ -9,9 +9,7 @@
     "scripting"
   ],
   "host_permissions": [
-    "https://www.youtube.com/*",
-    "https://*.replit.dev/*",
-    "https://*.replit.app/*"
+    "https://www.youtube.com/*"
   ],
   "action": {
     "default_popup": "popup/popup.html",
