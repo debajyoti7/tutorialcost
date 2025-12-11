@@ -21,6 +21,38 @@ function hashSessionId(sessionId: string): string {
   return createHmac('sha256', secret).update(sessionId).digest('hex');
 }
 
+// Normalize difficulty level to consistent values
+function normalizeDifficultyLevel(level: string): 'Easy' | 'Intermediate' | 'Advanced' {
+  const normalized = level.toLowerCase().trim();
+  
+  // Map various AI responses to consistent labels
+  if (normalized.includes('n/a') || 
+      normalized.includes('not applicable') || 
+      normalized.includes('beginner') || 
+      normalized.includes('easy') || 
+      normalized.includes('low') ||
+      normalized.includes('foundational') ||
+      normalized.includes('basic')) {
+    return 'Easy';
+  }
+  
+  if (normalized.includes('intermediate') || 
+      normalized.includes('medium') || 
+      normalized.includes('moderate')) {
+    return 'Intermediate';
+  }
+  
+  if (normalized.includes('advanced') || 
+      normalized.includes('high') || 
+      normalized.includes('complex') ||
+      normalized.includes('expert')) {
+    return 'Advanced';
+  }
+  
+  // Default to Intermediate if unrecognized
+  return 'Intermediate';
+}
+
 // Estimate infrastructure costs for self-hosted tools
 function estimateInfrastructureCosts(tools: Array<{ 
   name: string; 
@@ -627,7 +659,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         url: analysis.url,
         experimentsCount: analysis.experiments.length,
         toolsCount: analysis.tools.length,
-        summary: analysis.summary,
+        summary: {
+          ...analysis.summary,
+          difficultyLevel: normalizeDifficultyLevel(analysis.summary.difficultyLevel)
+        },
         viewCount: analysis.viewCount,
         lastViewedAt: analysis.lastViewedAt,
         tags: analysis.tags,

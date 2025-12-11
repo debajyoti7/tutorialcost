@@ -43,7 +43,7 @@ interface AnalysisListItem {
   summary: {
     totalCostMin: number;
     totalCostMax: number;
-    difficultyLevel: string;
+    difficultyLevel: 'Easy' | 'Intermediate' | 'Advanced';
   };
   viewCount: number;
   lastViewedAt: Date | null;
@@ -351,12 +351,21 @@ export default function Archive() {
                     </div>
 
                     {/* View count and difficulty */}
-                    <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="flex items-center justify-between gap-2 text-sm">
                       <div className="flex items-center gap-1.5">
                         <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                         <span className="text-muted-foreground">{analysis.viewCount} views</span>
                       </div>
-                      <Badge variant="secondary" className="text-xs w-fit">
+                      <Badge 
+                        variant="secondary" 
+                        className={`text-xs ${
+                          analysis.summary.difficultyLevel === 'Easy' 
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
+                            : analysis.summary.difficultyLevel === 'Advanced' 
+                              ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
+                              : ''
+                        }`}
+                      >
                         {analysis.summary.difficultyLevel}
                       </Badge>
                     </div>
