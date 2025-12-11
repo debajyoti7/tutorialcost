@@ -22,26 +22,34 @@ function hashSessionId(sessionId: string): string {
 }
 
 // Normalize difficulty level to consistent values
-function normalizeDifficultyLevel(level: string): 'Easy' | 'Intermediate' | 'Advanced' {
+function normalizeDifficultyLevel(level: string): 'Easy' | 'Intermediate' | 'Advanced' | 'Not AI' {
   const normalized = level.toLowerCase().trim();
   
-  // Map various AI responses to consistent labels
+  // N/A or not applicable - content is not an AI experiment
   if (normalized.includes('n/a') || 
       normalized.includes('not applicable') || 
-      normalized.includes('beginner') || 
+      normalized.includes('foundational') ||
+      normalized.includes('no experiments')) {
+    return 'Not AI';
+  }
+  
+  // Easy/Beginner level
+  if (normalized.includes('beginner') || 
       normalized.includes('easy') || 
       normalized.includes('low') ||
-      normalized.includes('foundational') ||
-      normalized.includes('basic')) {
+      normalized.includes('basic') ||
+      normalized.includes('simple')) {
     return 'Easy';
   }
   
+  // Intermediate/Medium level
   if (normalized.includes('intermediate') || 
       normalized.includes('medium') || 
       normalized.includes('moderate')) {
     return 'Intermediate';
   }
   
+  // Advanced/High level
   if (normalized.includes('advanced') || 
       normalized.includes('high') || 
       normalized.includes('complex') ||

@@ -43,7 +43,7 @@ interface AnalysisListItem {
   summary: {
     totalCostMin: number;
     totalCostMax: number;
-    difficultyLevel: 'Easy' | 'Intermediate' | 'Advanced';
+    difficultyLevel: 'Easy' | 'Intermediate' | 'Advanced' | 'Not AI';
   };
   viewCount: number;
   lastViewedAt: Date | null;
@@ -363,7 +363,9 @@ export default function Archive() {
                             ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
                             : analysis.summary.difficultyLevel === 'Advanced' 
                               ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
-                              : ''
+                              : analysis.summary.difficultyLevel === 'Not AI'
+                                ? 'bg-slate-500/10 text-slate-600 dark:text-slate-400'
+                                : ''
                         }`}
                       >
                         {analysis.summary.difficultyLevel}
