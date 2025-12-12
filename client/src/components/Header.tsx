@@ -1,7 +1,8 @@
-import { Brain, Archive, Sparkles, Chrome } from "lucide-react";
+import { Archive, Sparkles, Chrome } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
+import logoIcon from "@assets/logo.png";
 
 export default function Header() {
   const [location] = useLocation();
@@ -16,8 +17,8 @@ export default function Header() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-primary to-primary/80 text-primary-foreground rounded-xl shadow-lg shadow-primary/20">
-                <Brain className="w-5 h-5" />
+              <div className="flex items-center justify-center w-10 h-10 rounded-xl shadow-lg shadow-primary/20 overflow-hidden">
+                <img src={logoIcon} alt="Tutorial Cost" className="w-10 h-10" />
               </div>
               <div>
                 <h1 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
