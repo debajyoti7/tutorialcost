@@ -1,6 +1,6 @@
 const API_BASE_URL = 'https://tutorialcost.replit.app';
+const TIMEOUT_MS = 120000; // 2 minute timeout for analysis
 
-// Listen for messages from popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'START_ANALYSIS') {
     handleAnalysis(message.url, message.videoId);
@@ -11,7 +11,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     chrome.storage.local.get(['analysisState'], (result) => {
       sendResponse(result.analysisState || null);
     });
-    return true; // Keep channel open for async response
+    return true;
   }
   
   if (message.type === 'CLEAR_ANALYSIS') {
@@ -29,18 +29,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 async function handleAnalysis(url, videoId) {
-  // Set initial loading state
   await chrome.storage.local.set({
     analysisState: {
       status: 'loading',
       videoId: videoId,
       url: url,
-      message: 'Extracting video transcript...',
+      message: 'Connecting to analysis server...',
       startTime: Date.now()
     }
   });
   
-  // Rotate loading messages
   const messages = [
     'Extracting video transcript...',
     'Identifying LLM experiments...',
@@ -62,27 +60,41 @@ async function handleAnalysis(url, videoId) {
     } else {
       clearInterval(messageInterval);
     }
-  }, 2500);
+  }, 3000);
   
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    
     const response = await fetch(`${API_BASE_URL}/api/analyze`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ url })
+      body: JSON.stringify({ url }),
+      signal: controller.signal
     });
     
+    clearTimeout(timeoutId);
     clearInterval(messageInterval);
     
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || errorData.error || 'Analysis failed');
+      let errorMessage = 'Analysis failed';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorData.error || errorMessage;
+      } catch (e) {
+        errorMessage = `Server error (${response.status})`;
+      }
+      throw new Error(errorMessage);
     }
     
     const data = await response.json();
     
-    // Save successful result
+    if (!data || !data.experiments || !data.tools) {
+      throw new Error('Invalid response from server');
+    }
+    
     await chrome.storage.local.set({
       analysisState: {
         status: 'success',
@@ -96,13 +108,21 @@ async function handleAnalysis(url, videoId) {
   } catch (error) {
     clearInterval(messageInterval);
     
-    // Save error state
+    let errorMessage = error.message;
+    if (error.name === 'AbortError') {
+      errorMessage = 'Analysis timed out. The video may be too long or the server is busy.';
+    } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+      errorMessage = 'Could not connect to the analysis server. Please check your internet connection.';
+    } else if (error.message.includes('transcript')) {
+      errorMessage = 'This video does not have captions/transcript available.';
+    }
+    
     await chrome.storage.local.set({
       analysisState: {
         status: 'error',
         videoId: videoId,
         url: url,
-        error: error.message,
+        error: errorMessage,
         failedAt: Date.now()
       }
     });
@@ -110,7 +130,6 @@ async function handleAnalysis(url, videoId) {
 }
 
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('Tutorial Cost extension installed');
-  // Clear any stale analysis state on install/update
+  console.log('Tutorial Cost extension installed v1.0.4');
   chrome.storage.local.remove(['analysisState']);
 });
