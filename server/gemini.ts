@@ -234,3 +234,55 @@ export async function extractVideoTitle(url: string): Promise<string> {
     return "Unknown Video";
   }
 }
+
+export async function transcribeVideoWithGemini(videoUrl: string): Promise<string> {
+  try {
+    console.log('Using Gemini to transcribe video:', videoUrl);
+    
+    const prompt = `You are a professional transcriptionist. Watch this YouTube video and provide a complete, accurate transcription of all spoken content.
+
+Instructions:
+- Transcribe ALL spoken words in the video
+- Include speaker changes if there are multiple speakers
+- Include relevant non-verbal sounds in brackets like [music] or [applause] only if significant
+- Focus on accuracy and completeness
+- Do not summarize - provide the full word-for-word transcription
+- Format as continuous paragraphs, not timestamps
+
+YouTube Video URL: ${videoUrl}
+
+Provide the complete transcription:`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              fileData: {
+                fileUri: videoUrl,
+                mimeType: "video/*"
+              }
+            },
+            {
+              text: prompt
+            }
+          ]
+        }
+      ]
+    });
+
+    const transcript = response.text;
+    
+    if (!transcript || transcript.length < 50) {
+      throw new Error('Gemini returned insufficient transcription');
+    }
+    
+    console.log(`Gemini transcribed ${transcript.length} characters`);
+    return transcript;
+  } catch (error) {
+    console.error('Gemini video transcription failed:', error);
+    throw new Error(`Failed to transcribe video with AI: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}

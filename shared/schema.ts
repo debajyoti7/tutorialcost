@@ -11,6 +11,7 @@ export const analyses = pgTable("analyses", {
   platform: text("platform").notNull(), // 'YouTube' | 'Podcast'
   duration: text("duration"),
   transcript: text("transcript"),
+  transcriptSource: text("transcript_source").$type<'youtube' | 'ai-generated' | 'description-only'>(), // Source of transcript
   experiments: jsonb("experiments").notNull().$type<{
     id: string;
     title: string;

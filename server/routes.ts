@@ -599,6 +599,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         platform: contentInfo.platform,
         duration: contentInfo.duration,
         transcript: contentInfo.transcript,
+        transcriptSource: contentInfo.transcriptSource,
         sessionHash,
         experiments: experimentsWithCosts,
         tools: detailedTools,
@@ -615,7 +616,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           title: contentInfo.title,
           duration: contentInfo.duration,
           platform: contentInfo.platform,
-          url
+          url,
+          transcriptSource: contentInfo.transcriptSource
         },
         experiments: experimentsWithCosts,
         tools: detailedTools,

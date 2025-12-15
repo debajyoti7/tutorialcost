@@ -66,6 +66,7 @@ export interface AnalysisData {
     duration: string;
     platform: 'YouTube' | 'Podcast';
     url: string;
+    transcriptSource?: 'youtube' | 'ai-generated' | 'description-only';
   };
   experiments: Experiment[];
   tools: Tool[];
@@ -360,6 +361,34 @@ export default function AnalysisResults({ data, onNewAnalysis, hideShareButton =
           )}
         </CardContent>
       </Card>
+
+      {/* AI Transcription Warning Banner */}
+      {data.contentInfo.transcriptSource === 'ai-generated' && (
+        <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800" data-testid="banner-ai-transcript">
+          <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium text-blue-900 dark:text-blue-100">AI-Generated Transcript</p>
+            <p className="text-sm text-blue-700 dark:text-blue-300">
+              YouTube captions were not available for this video. The transcript was generated using AI, 
+              which may contain some inaccuracies. Experiment and tool identification should still be reliable.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Description-Only Warning Banner */}
+      {data.contentInfo.transcriptSource === 'description-only' && (
+        <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800" data-testid="banner-description-only">
+          <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium text-amber-900 dark:text-amber-100">Limited Analysis</p>
+            <p className="text-sm text-amber-700 dark:text-amber-300">
+              No transcript or AI transcription was available. This analysis is based only on the video description, 
+              which may not capture all experiments and tools mentioned in the video.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Experiments Section */}

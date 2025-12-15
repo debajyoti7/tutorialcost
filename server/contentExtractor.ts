@@ -7,6 +7,7 @@ import {
   createUnsupportedPlatformError,
   createNetworkError 
 } from './errors';
+import { transcribeVideoWithGemini } from './gemini';
 
 export interface ContentInfo {
   title: string;
@@ -16,6 +17,7 @@ export interface ContentInfo {
   description?: string;
   hasTranscript: boolean;
   hasDescription: boolean;
+  transcriptSource: 'youtube' | 'ai-generated' | 'description-only';
 }
 
 export async function extractYouTubeContent(url: string): Promise<ContentInfo> {
@@ -60,19 +62,38 @@ export async function extractYouTubeContent(url: string): Promise<ContentInfo> {
     }
     
     // Then try to get transcript using custom direct fetch
+    let transcriptSource: 'youtube' | 'ai-generated' | 'description-only' = 'youtube';
+    
     try {
       transcriptItems = await fetchYouTubeTranscriptDirect(videoId);
       hasTranscript = transcriptItems.length > 0;
       if (hasTranscript) {
         console.log('Successfully extracted transcript with direct fetch');
+        transcriptSource = 'youtube';
       }
     } catch (transcriptError) {
       console.log('Transcript fetch failed:', transcriptError);
-      // Don't throw error yet - we might have description
+      // Don't throw error yet - try Gemini transcription
     }
     
-    // Check if we have either transcript or meaningful description
-    if ((!transcriptItems || transcriptItems.length === 0) && !hasDescription) {
+    // If transcript fetch failed, try Gemini AI transcription
+    let aiTranscript = "";
+    if (!hasTranscript) {
+      try {
+        console.log('Attempting AI transcription with Gemini...');
+        aiTranscript = await transcribeVideoWithGemini(url);
+        if (aiTranscript && aiTranscript.length > 100) {
+          hasTranscript = true;
+          transcriptSource = 'ai-generated';
+          console.log('Successfully transcribed video with Gemini AI');
+        }
+      } catch (aiError) {
+        console.log('Gemini transcription also failed:', aiError);
+      }
+    }
+    
+    // If both failed and no description, throw error
+    if (!hasTranscript && !hasDescription) {
       throw createTranscriptDisabledError();
     }
 
@@ -80,8 +101,8 @@ export async function extractYouTubeContent(url: string): Promise<ContentInfo> {
     let transcript = "";
     let duration = "0:00";
     
-    if (hasTranscript && transcriptItems && transcriptItems.length > 0) {
-      // Process transcript
+    if (transcriptSource === 'youtube' && transcriptItems && transcriptItems.length > 0) {
+      // Process YouTube transcript
       transcript = transcriptItems
         .map(item => item.text)
         .join(' ')
@@ -95,16 +116,20 @@ export async function extractYouTubeContent(url: string): Promise<ContentInfo> {
       const minutes = Math.floor(totalSeconds / 60);
       const seconds = totalSeconds % 60;
       duration = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    } else if (transcriptSource === 'ai-generated' && aiTranscript) {
+      // Use AI-generated transcript
+      transcript = aiTranscript;
     }
     
     // If we only have description, use it as the main content for analysis
     if (!hasTranscript && hasDescription) {
       transcript = `Video Description: ${videoDescription}`;
+      transcriptSource = 'description-only';
       console.log('Using video description as primary content for analysis');
     }
     
-    // If we have both, combine them for richer analysis
-    if (hasTranscript && hasDescription) {
+    // If we have both transcript and description, combine them
+    if (hasTranscript && hasDescription && transcript) {
       transcript = `${transcript}\n\nVideo Description: ${videoDescription}`;
       console.log('Combining transcript and description for enhanced analysis');
     }
@@ -120,7 +145,8 @@ export async function extractYouTubeContent(url: string): Promise<ContentInfo> {
       transcript,
       description: videoDescription,
       hasTranscript,
-      hasDescription
+      hasDescription,
+      transcriptSource
     };
   } catch (error) {
     console.error('YouTube extraction failed:', error);
