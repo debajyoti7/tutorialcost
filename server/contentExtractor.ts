@@ -1,4 +1,4 @@
-import { YoutubeTranscript } from 'youtube-transcript';
+import { fetchTranscript } from 'youtube-transcript-plus';
 import fetch from 'node-fetch';
 import { google } from 'googleapis';
 import { 
@@ -60,37 +60,17 @@ export async function extractYouTubeContent(url: string): Promise<ContentInfo> {
       }
     }
     
-    // Then try to get transcript with error handling
+    // Then try to get transcript with error handling using youtube-transcript-plus
     try {
-      transcriptItems = await YoutubeTranscript.fetchTranscript(url);
+      // Use youtube-transcript-plus with browser-like User-Agent
+      transcriptItems = await fetchTranscript(videoId, {
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      });
       hasTranscript = true;
-      console.log('Successfully extracted transcript');
+      console.log('Successfully extracted transcript with youtube-transcript-plus');
     } catch (transcriptError) {
-      console.log('Initial transcript fetch failed, trying with different options:', transcriptError);
-      
-      // Try different language configurations if the first attempt fails
-      try {
-        transcriptItems = await YoutubeTranscript.fetchTranscript(url, {
-          lang: 'en'
-        });
-        hasTranscript = true;
-        console.log('Successfully extracted English transcript');
-      } catch (secondError) {
-        console.log('English transcript not available, trying any available language:', secondError);
-        
-        // Last attempt: try to get any transcript regardless of language
-        try {
-          const videoId = extractVideoId(url);
-          if (videoId) {
-            transcriptItems = await YoutubeTranscript.fetchTranscript(videoId);
-            hasTranscript = true;
-            console.log('Successfully extracted transcript with video ID');
-          }
-        } catch (finalError) {
-          console.log('All transcript attempts failed:', finalError);
-          // Don't throw error yet - we might have description
-        }
-      }
+      console.log('Transcript fetch failed:', transcriptError);
+      // Don't throw error yet - we might have description
     }
     
     // Check if we have either transcript or meaningful description
