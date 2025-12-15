@@ -385,10 +385,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         contentInfo.title
       );
 
-      console.log(`AI analysis found ${aiAnalysis.experiments.length} experiments and ${aiAnalysis.tools.length} tools`);
+      // Ensure experiments and tools arrays exist
+      const experiments = aiAnalysis.experiments || [];
+      const tools = aiAnalysis.tools || [];
+      
+      console.log(`AI analysis found ${experiments.length} experiments and ${tools.length} tools`);
 
       // Check if no experiments were found
-      if (aiAnalysis.experiments.length === 0 && aiAnalysis.tools.length === 0) {
+      if (experiments.length === 0 && tools.length === 0) {
         throw createNoExperimentsError();
       }
 
@@ -397,7 +401,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const detailedTools = [];
       let totalCost = 0;
 
-      for (const aiTool of aiAnalysis.tools) {
+      for (const aiTool of tools) {
         // Try to match with our tool database
         const dbTool = allTools.find(t => 
           t.name.toLowerCase().includes(aiTool.name.toLowerCase()) ||
@@ -430,8 +434,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Fallback: if no match was found, choose based on experiment complexity
           if (!tierMatched && !suggestedTierText) {
-            const avgComplexity = aiAnalysis.experiments.length > 0 
-              ? aiAnalysis.experiments[0].complexity 
+            const avgComplexity = experiments.length > 0 
+              ? experiments[0].complexity 
               : "Medium";
             
             if (avgComplexity === "Low" && freeTier) {
@@ -527,7 +531,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Calculate costs for each experiment by summing required tools
-      const experimentsWithCosts = aiAnalysis.experiments.map(exp => {
+      const experimentsWithCosts = experiments.map(exp => {
         let expCostMin = 0;
         let expCostMax = 0;
         
