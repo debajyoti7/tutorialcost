@@ -344,29 +344,149 @@ interface TranscriptItem {
 }
 
 async function fetchYouTubeTranscriptDirect(videoId: string): Promise<TranscriptItem[]> {
-  const userAgents = [
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2.1 Safari/605.1.15',
-    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  // Try multiple client types - some bypass restrictions better than others
+  const clientConfigs = [
+    {
+      name: 'ANDROID',
+      payload: {
+        videoId: videoId,
+        context: {
+          client: {
+            clientName: 'ANDROID',
+            clientVersion: '19.09.37',
+            androidSdkVersion: 30,
+            hl: 'en',
+            gl: 'US',
+          }
+        }
+      },
+      headers: {
+        'User-Agent': 'com.google.android.youtube/19.09.37 (Linux; U; Android 11) gzip',
+      }
+    },
+    {
+      name: 'IOS',
+      payload: {
+        videoId: videoId,
+        context: {
+          client: {
+            clientName: 'IOS',
+            clientVersion: '19.09.3',
+            deviceModel: 'iPhone14,3',
+            hl: 'en',
+            gl: 'US',
+          }
+        }
+      },
+      headers: {
+        'User-Agent': 'com.google.ios.youtube/19.09.3 (iPhone14,3; U; CPU iOS 15_6 like Mac OS X)',
+      }
+    },
+    {
+      name: 'TV_EMBEDDED',
+      payload: {
+        videoId: videoId,
+        context: {
+          client: {
+            clientName: 'TVHTML5_SIMPLY_EMBEDDED_PLAYER',
+            clientVersion: '2.0',
+            hl: 'en',
+            gl: 'US',
+          },
+          thirdParty: {
+            embedUrl: 'https://www.google.com'
+          }
+        }
+      },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      }
+    }
   ];
   
-  const userAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
+  const playerUrl = 'https://www.youtube.com/youtubei/v1/player?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8';
   
-  // Fetch the YouTube watch page to extract caption data
+  for (const config of clientConfigs) {
+    console.log(`Trying innertube ${config.name} client for video:`, videoId);
+    
+    try {
+      const playerResponse = await fetch(playerUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Origin': 'https://www.youtube.com',
+          'Referer': 'https://www.youtube.com/',
+          ...config.headers
+        },
+        body: JSON.stringify(config.payload)
+      });
+      
+      if (!playerResponse.ok) {
+        console.log(`${config.name} client failed: ${playerResponse.status}`);
+        continue;
+      }
+      
+      const playerData = await playerResponse.json() as any;
+      
+      // Check for playability issues
+      if (playerData?.playabilityStatus?.status !== 'OK') {
+        console.log(`${config.name} playability: ${playerData?.playabilityStatus?.status}`);
+      }
+      
+      const captions = playerData?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+      
+      if (captions && captions.length > 0) {
+        console.log(`Found ${captions.length} caption tracks with ${config.name} client`);
+        
+        // Prefer English captions
+        let captionTrack = captions.find((t: any) => t.languageCode === 'en' && !t.kind);
+        if (!captionTrack) {
+          captionTrack = captions.find((t: any) => t.languageCode === 'en');
+        }
+        if (!captionTrack) {
+          captionTrack = captions[0];
+        }
+        
+        const captionUrl = captionTrack.baseUrl;
+        if (captionUrl) {
+          console.log('Fetching captions from:', captionUrl.substring(0, 80) + '...');
+          
+          const captionResponse = await fetch(captionUrl, {
+            headers: {
+              'User-Agent': config.headers['User-Agent'],
+              'Accept': '*/*',
+            }
+          });
+          
+          if (captionResponse.ok) {
+            const captionXml = await captionResponse.text();
+            const items = parseTranscriptXml(captionXml);
+            if (items.length > 0) {
+              return items;
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.log(`${config.name} client error:`, err);
+    }
+  }
+  
+  // Fall back to page scraping as last resort
+  console.log('All innertube clients failed, trying page scrape');
+  return await fetchTranscriptFromPage(videoId);
+}
+
+async function fetchTranscriptFromPage(videoId: string): Promise<TranscriptItem[]> {
+  const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
   const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
   
   const response = await fetch(watchUrl, {
     headers: {
       'User-Agent': userAgent,
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
       'Accept-Language': 'en-US,en;q=0.9',
-      'Accept-Encoding': 'gzip, deflate, br',
-      'Connection': 'keep-alive',
-      'Upgrade-Insecure-Requests': '1',
-      'Sec-Fetch-Dest': 'document',
-      'Sec-Fetch-Mode': 'navigate',
-      'Sec-Fetch-Site': 'none',
-      'Cache-Control': 'max-age=0',
+      'Cookie': 'CONSENT=YES+cb; SOCS=CAESEwgDEgk1ODk4NjM1ODAaAmVuIAEaBgiAjJq1Bg',
     }
   });
   
@@ -376,8 +496,11 @@ async function fetchYouTubeTranscriptDirect(videoId: string): Promise<Transcript
   
   const html = await response.text();
   
-  // Extract captionTracks from the page's ytInitialPlayerResponse
-  const playerResponseMatch = html.match(/ytInitialPlayerResponse\s*=\s*({.+?});(?:var|<\/script>|\n)/);
+  // Extract captionTracks from ytInitialPlayerResponse
+  let playerResponseMatch = html.match(/ytInitialPlayerResponse\s*=\s*({.+?});(?:var|<\/script>|\n)/);
+  if (!playerResponseMatch) {
+    playerResponseMatch = html.match(/var ytInitialPlayerResponse\s*=\s*({.+?});/);
+  }
   
   if (!playerResponseMatch) {
     throw new Error('Could not find player response in page');
@@ -396,27 +519,17 @@ async function fetchYouTubeTranscriptDirect(videoId: string): Promise<Transcript
     throw new Error('No captions available for this video');
   }
   
-  // Prefer English captions, then auto-generated English, then first available
-  let captionTrack = captions.find((t: any) => t.languageCode === 'en' && !t.kind);
-  if (!captionTrack) {
-    captionTrack = captions.find((t: any) => t.languageCode === 'en');
-  }
-  if (!captionTrack) {
-    captionTrack = captions[0];
-  }
-  
+  let captionTrack = captions.find((t: any) => t.languageCode === 'en') || captions[0];
   const captionUrl = captionTrack.baseUrl;
   
   if (!captionUrl) {
     throw new Error('No caption URL found');
   }
   
-  // Fetch the caption XML
   const captionResponse = await fetch(captionUrl, {
     headers: {
       'User-Agent': userAgent,
       'Accept': '*/*',
-      'Accept-Language': 'en-US,en;q=0.9',
     }
   });
   
@@ -425,8 +538,10 @@ async function fetchYouTubeTranscriptDirect(videoId: string): Promise<Transcript
   }
   
   const captionXml = await captionResponse.text();
-  
-  // Parse the XML transcript
+  return parseTranscriptXml(captionXml);
+}
+
+function parseTranscriptXml(captionXml: string): TranscriptItem[] {
   const transcriptItems: TranscriptItem[] = [];
   const textRegex = /<text start="([\d.]+)" dur="([\d.]+)"[^>]*>([^<]*)<\/text>/g;
   let match;
@@ -456,7 +571,6 @@ async function fetchYouTubeTranscriptDirect(videoId: string): Promise<Transcript
     throw new Error('Could not parse transcript from captions');
   }
   
-  console.log(`Fetched ${transcriptItems.length} transcript segments directly from YouTube`);
-  
+  console.log(`Fetched ${transcriptItems.length} transcript segments`);
   return transcriptItems;
 }
