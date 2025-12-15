@@ -1,4 +1,3 @@
-import { fetchTranscript } from 'youtube-transcript-plus';
 import fetch from 'node-fetch';
 import { google } from 'googleapis';
 import { 
@@ -60,14 +59,13 @@ export async function extractYouTubeContent(url: string): Promise<ContentInfo> {
       }
     }
     
-    // Then try to get transcript with error handling using youtube-transcript-plus
+    // Then try to get transcript using custom direct fetch
     try {
-      // Use youtube-transcript-plus with browser-like User-Agent
-      transcriptItems = await fetchTranscript(videoId, {
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      });
-      hasTranscript = true;
-      console.log('Successfully extracted transcript with youtube-transcript-plus');
+      transcriptItems = await fetchYouTubeTranscriptDirect(videoId);
+      hasTranscript = transcriptItems.length > 0;
+      if (hasTranscript) {
+        console.log('Successfully extracted transcript with direct fetch');
+      }
     } catch (transcriptError) {
       console.log('Transcript fetch failed:', transcriptError);
       // Don't throw error yet - we might have description
@@ -337,4 +335,128 @@ export function validateUrl(url: string): { isValid: boolean; error?: string } {
       error: 'Please enter a valid URL'
     };
   }
+}
+
+interface TranscriptItem {
+  text: string;
+  offset: number;
+  duration: number;
+}
+
+async function fetchYouTubeTranscriptDirect(videoId: string): Promise<TranscriptItem[]> {
+  const userAgents = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2.1 Safari/605.1.15',
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  ];
+  
+  const userAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
+  
+  // Fetch the YouTube watch page to extract caption data
+  const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
+  
+  const response = await fetch(watchUrl, {
+    headers: {
+      'User-Agent': userAgent,
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'Connection': 'keep-alive',
+      'Upgrade-Insecure-Requests': '1',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'none',
+      'Cache-Control': 'max-age=0',
+    }
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch YouTube page: ${response.status}`);
+  }
+  
+  const html = await response.text();
+  
+  // Extract captionTracks from the page's ytInitialPlayerResponse
+  const playerResponseMatch = html.match(/ytInitialPlayerResponse\s*=\s*({.+?});(?:var|<\/script>|\n)/);
+  
+  if (!playerResponseMatch) {
+    throw new Error('Could not find player response in page');
+  }
+  
+  let playerResponse;
+  try {
+    playerResponse = JSON.parse(playerResponseMatch[1]);
+  } catch (e) {
+    throw new Error('Failed to parse player response');
+  }
+  
+  const captions = playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+  
+  if (!captions || captions.length === 0) {
+    throw new Error('No captions available for this video');
+  }
+  
+  // Prefer English captions, then auto-generated English, then first available
+  let captionTrack = captions.find((t: any) => t.languageCode === 'en' && !t.kind);
+  if (!captionTrack) {
+    captionTrack = captions.find((t: any) => t.languageCode === 'en');
+  }
+  if (!captionTrack) {
+    captionTrack = captions[0];
+  }
+  
+  const captionUrl = captionTrack.baseUrl;
+  
+  if (!captionUrl) {
+    throw new Error('No caption URL found');
+  }
+  
+  // Fetch the caption XML
+  const captionResponse = await fetch(captionUrl, {
+    headers: {
+      'User-Agent': userAgent,
+      'Accept': '*/*',
+      'Accept-Language': 'en-US,en;q=0.9',
+    }
+  });
+  
+  if (!captionResponse.ok) {
+    throw new Error(`Failed to fetch captions: ${captionResponse.status}`);
+  }
+  
+  const captionXml = await captionResponse.text();
+  
+  // Parse the XML transcript
+  const transcriptItems: TranscriptItem[] = [];
+  const textRegex = /<text start="([\d.]+)" dur="([\d.]+)"[^>]*>([^<]*)<\/text>/g;
+  let match;
+  
+  while ((match = textRegex.exec(captionXml)) !== null) {
+    const start = parseFloat(match[1]);
+    const dur = parseFloat(match[2]);
+    let text = match[3]
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/\n/g, ' ')
+      .trim();
+    
+    if (text) {
+      transcriptItems.push({
+        text,
+        offset: start,
+        duration: dur
+      });
+    }
+  }
+  
+  if (transcriptItems.length === 0) {
+    throw new Error('Could not parse transcript from captions');
+  }
+  
+  console.log(`Fetched ${transcriptItems.length} transcript segments directly from YouTube`);
+  
+  return transcriptItems;
 }
