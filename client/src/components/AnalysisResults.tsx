@@ -137,8 +137,8 @@ export default function AnalysisResults({ data, onNewAnalysis, hideShareButton =
         ...data,
         exportedAt: new Date().toISOString(),
         summary: {
-          experimentsCount: data.experiments.length,
-          toolsCount: data.tools.length,
+          experimentsCount: data.experiments?.length || 0,
+          toolsCount: data.tools?.length || 0,
           toolSubscriptionCostMin: data.summary.toolSubscriptionCostMin,
           toolSubscriptionCostMax: data.summary.toolSubscriptionCostMax,
           infrastructureCostMin: data.summary.infrastructureCostMin,
@@ -318,11 +318,11 @@ export default function AnalysisResults({ data, onNewAnalysis, hideShareButton =
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="text-center p-4 bg-muted/50 rounded-lg">
-              <div className="text-2xl font-bold text-foreground">{data.experiments.length}</div>
+              <div className="text-2xl font-bold text-foreground">{data.experiments?.length || 0}</div>
               <div className="text-sm text-muted-foreground">Experiments Found</div>
             </div>
             <div className="text-center p-4 bg-muted/50 rounded-lg">
-              <div className="text-2xl font-bold text-foreground">{data.tools.length}</div>
+              <div className="text-2xl font-bold text-foreground">{data.tools?.length || 0}</div>
               <div className="text-sm text-muted-foreground">Tools Identified</div>
             </div>
             <div className="text-center p-4 bg-emerald/10 rounded-lg space-y-2">
