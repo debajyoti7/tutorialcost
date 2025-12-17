@@ -170,37 +170,36 @@ export default function Archive() {
 
       {/* Filters Section with Glassmorphism */}
       <div className="sticky top-16 z-40 bg-background/80 backdrop-blur-xl border-b border-border/50">
-        <div className="container max-w-7xl mx-auto px-4 py-6 space-y-4">
-          <div className="flex gap-4 items-center flex-wrap">
+        <div className="container max-w-7xl mx-auto px-4 py-4 space-y-3">
+          {/* Primary filter row */}
+          <div className="flex gap-3 items-center flex-wrap">
             <div className="flex-1 min-w-[200px] relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-primary" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search by title, URL, label, or tags..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-11 h-11 bg-background/50 border-border/50 focus:border-primary/50"
+                className="pl-10 bg-background/50 border-border/50 focus:border-primary/50"
                 data-testid="input-search"
               />
             </div>
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button
-                variant={filterFavorites ? "default" : "outline"}
-                size="default"
-                onClick={() => setFilterFavorites(!filterFavorites)}
-                className="h-11 gap-2"
-                data-testid="button-filter-favorites"
-              >
-                <Star className={`h-4 w-4 ${filterFavorites ? 'fill-current' : ''}`} />
-                Favorites
-              </Button>
-            </motion.div>
+            <Button
+              variant={filterFavorites ? "default" : "outline"}
+              onClick={() => setFilterFavorites(!filterFavorites)}
+              className="gap-2"
+              data-testid="button-filter-favorites"
+            >
+              <Star className={`h-4 w-4 ${filterFavorites ? 'fill-current' : ''}`} />
+              Favorites
+            </Button>
           </div>
 
-          <div className="flex gap-4 items-center flex-wrap">
+          {/* Secondary filter row - all same height */}
+          <div className="flex gap-3 items-center flex-wrap">
             {/* Tags Filter */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" data-testid="button-filter-tags">
+                <Button variant="outline" data-testid="button-filter-tags">
                   <SlidersHorizontal className="h-4 w-4 mr-2" />
                   Tags {selectedTags.length > 0 && `(${selectedTags.length})`}
                 </Button>
@@ -227,7 +226,7 @@ export default function Archive() {
 
             {/* Cost Range Filter */}
             <Select value={costRange} onValueChange={setCostRange}>
-              <SelectTrigger className="w-[180px]" data-testid="select-cost-range">
+              <SelectTrigger className="w-[160px]" data-testid="select-cost-range">
                 <SelectValue placeholder="Cost Range" />
               </SelectTrigger>
               <SelectContent>
@@ -241,7 +240,7 @@ export default function Archive() {
 
             {/* Sort By */}
             <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-[180px]" data-testid="select-sort">
+              <SelectTrigger className="w-[160px]" data-testid="select-sort">
                 <SelectValue placeholder="Sort By" />
               </SelectTrigger>
               <SelectContent>
@@ -289,99 +288,99 @@ export default function Archive() {
               >
                 <Link href={`/analysis/${analysis.id}`}>
                   <Card className="h-full hover-elevate cursor-pointer transition-all border-border/50 bg-card/80 backdrop-blur-sm" data-testid={`card-analysis-${analysis.id}`}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold truncate" title={analysis.label || analysis.title}>
-                          {analysis.label || analysis.title}
-                        </h3>
-                        {analysis.label && (
-                          <p className="text-xs text-muted-foreground truncate" title={analysis.title}>
-                            {analysis.title}
-                          </p>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold truncate leading-snug" title={analysis.label || analysis.title}>
+                            {analysis.label || analysis.title}
+                          </h3>
+                          {analysis.label && (
+                            <p className="text-xs text-muted-foreground truncate mt-0.5" title={analysis.title}>
+                              {analysis.title}
+                            </p>
+                          )}
+                        </div>
+                        {analysis.isFavorite && (
+                          <Star className="h-4 w-4 text-yellow-500 fill-yellow-500 flex-shrink-0 mt-0.5" />
                         )}
                       </div>
-                      {analysis.isFavorite && (
-                        <Star className="h-4 w-4 text-yellow-500 fill-yellow-500 flex-shrink-0" />
+                      
+                      {/* Tags */}
+                      {analysis.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {analysis.tags.slice(0, 3).map((tag) => (
+                            <Badge key={tag} variant="secondary" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                          {analysis.tags.length > 3 && (
+                            <Badge variant="secondary" className="text-xs">
+                              +{analysis.tags.length - 3}
+                            </Badge>
+                          )}
+                        </div>
                       )}
-                    </div>
-                    
-                    {/* Tags */}
-                    {analysis.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {analysis.tags.slice(0, 3).map((tag) => (
-                          <Badge key={tag} variant="secondary" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                        {analysis.tags.length > 3 && (
-                          <Badge variant="secondary" className="text-xs">
-                            +{analysis.tags.length - 3}
-                          </Badge>
-                        )}
-                      </div>
-                    )}
-                  </CardHeader>
+                    </CardHeader>
 
-                  <CardContent className="space-y-3">
-                    {/* Platform Badge */}
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs">
-                        {analysis.platform}
-                      </Badge>
-                      {analysis.isOwnedByCurrentSession && (
+                    <CardContent className="space-y-3 pt-0">
+                      {/* Platform Badge */}
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <Badge variant="outline" className="text-xs">
-                          Your Analysis
+                          {analysis.platform}
                         </Badge>
-                      )}
-                    </div>
-
-                    {/* Stats */}
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div className="flex items-center gap-1.5">
-                        <Zap className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-muted-foreground">{analysis.experimentsCount} exp</span>
+                        {analysis.isOwnedByCurrentSession && (
+                          <Badge variant="outline" className="text-xs">
+                            Your Analysis
+                          </Badge>
+                        )}
                       </div>
+
+                      {/* Stats */}
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div className="flex items-center gap-1.5">
+                          <Zap className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                          <span className="text-muted-foreground">{analysis.experimentsCount} exp</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <DollarSign className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                          <span className="text-muted-foreground whitespace-nowrap">
+                            ${analysis.summary.totalCostMin}-${analysis.summary.totalCostMax}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* View count and difficulty */}
+                      <div className="flex items-center justify-between gap-3 text-sm">
+                        <div className="flex items-center gap-1.5">
+                          <Eye className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                          <span className="text-muted-foreground">{analysis.viewCount} views</span>
+                        </div>
+                        <Badge 
+                          variant="secondary" 
+                          className={`text-xs ${
+                            analysis.summary.difficultyLevel === 'Easy' 
+                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
+                              : analysis.summary.difficultyLevel === 'Advanced' 
+                                ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
+                                : analysis.summary.difficultyLevel === 'Not AI'
+                                  ? 'bg-slate-500/10 text-slate-600 dark:text-slate-400'
+                                  : ''
+                          }`}
+                        >
+                          {analysis.summary.difficultyLevel}
+                        </Badge>
+                      </div>
+                    </CardContent>
+
+                    <CardFooter className="text-xs text-muted-foreground pt-3">
                       <div className="flex items-center gap-1.5">
-                        <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-muted-foreground">
-                          ${analysis.summary.totalCostMin}-${analysis.summary.totalCostMax}
+                        <Calendar className="h-3.5 w-3.5 flex-shrink-0" />
+                        <span>
+                          {format(new Date(analysis.createdAt), 'MMM d, yyyy')}
                         </span>
                       </div>
-                    </div>
-
-                    {/* View count and difficulty */}
-                    <div className="flex items-center justify-between gap-2 text-sm">
-                      <div className="flex items-center gap-1.5">
-                        <Eye className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-muted-foreground">{analysis.viewCount} views</span>
-                      </div>
-                      <Badge 
-                        variant="secondary" 
-                        className={`text-xs ${
-                          analysis.summary.difficultyLevel === 'Easy' 
-                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
-                            : analysis.summary.difficultyLevel === 'Advanced' 
-                              ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
-                              : analysis.summary.difficultyLevel === 'Not AI'
-                                ? 'bg-slate-500/10 text-slate-600 dark:text-slate-400'
-                                : ''
-                        }`}
-                      >
-                        {analysis.summary.difficultyLevel}
-                      </Badge>
-                    </div>
-                  </CardContent>
-
-                  <CardFooter className="text-xs text-muted-foreground">
-                    <div className="flex items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5" />
-                      <span>
-                        {format(new Date(analysis.createdAt), 'MMM d, yyyy')}
-                      </span>
-                    </div>
-                  </CardFooter>
-                </Card>
+                    </CardFooter>
+                  </Card>
                 </Link>
               </motion.div>
             ))}

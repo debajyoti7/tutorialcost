@@ -267,12 +267,12 @@ export default function AnalysisResults({ data, onNewAnalysis, hideShareButton =
     <div className="w-full max-w-7xl mx-auto space-y-6">
       {/* Header with content info */}
       <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between">
-            <div className="space-y-2">
-              <CardTitle className="text-xl">{data.contentInfo.title}</CardTitle>
-              <CardDescription className="flex items-center gap-4">
-                <span className="flex items-center gap-1">
+        <CardHeader className="pb-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1.5 flex-1 min-w-0">
+              <CardTitle className="text-xl leading-tight">{data.contentInfo.title}</CardTitle>
+              <CardDescription className="flex items-center gap-3 flex-wrap">
+                <span className="flex items-center gap-1.5 text-sm">
                   <Clock className="w-4 h-4" />
                   {data.contentInfo.duration}
                 </span>
@@ -282,11 +282,11 @@ export default function AnalysisResults({ data, onNewAnalysis, hideShareButton =
                 </span>
               </CardDescription>
             </div>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2 flex-shrink-0">
               {!hideShareButton && (
                 <Button 
                   variant="outline" 
-                  size="sm" 
+                  size="default" 
                   onClick={handleShare}
                   data-testid="button-share"
                 >
@@ -297,7 +297,7 @@ export default function AnalysisResults({ data, onNewAnalysis, hideShareButton =
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" data-testid="button-export">
+                  <Button variant="outline" size="default" data-testid="button-export">
                     <Download className="w-4 h-4 mr-2" />
                     Export
                   </Button>
@@ -316,22 +316,22 @@ export default function AnalysisResults({ data, onNewAnalysis, hideShareButton =
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="text-center p-4 bg-muted/50 rounded-lg">
-              <div className="text-2xl font-bold text-foreground">{data.experiments?.length || 0}</div>
-              <div className="text-sm text-muted-foreground">Experiments Found</div>
+            <div className="flex flex-col items-center justify-center p-5 bg-muted/50 rounded-lg min-h-[100px]">
+              <div className="text-3xl font-bold text-foreground">{data.experiments?.length || 0}</div>
+              <div className="text-sm text-muted-foreground mt-1">Experiments Found</div>
             </div>
-            <div className="text-center p-4 bg-muted/50 rounded-lg">
-              <div className="text-2xl font-bold text-foreground">{data.tools?.length || 0}</div>
-              <div className="text-sm text-muted-foreground">Tools Identified</div>
+            <div className="flex flex-col items-center justify-center p-5 bg-muted/50 rounded-lg min-h-[100px]">
+              <div className="text-3xl font-bold text-foreground">{data.tools?.length || 0}</div>
+              <div className="text-sm text-muted-foreground mt-1">Tools Identified</div>
             </div>
-            <div className="text-center p-4 bg-emerald/10 rounded-lg space-y-2">
+            <div className="flex flex-col items-center justify-center p-5 bg-emerald/10 rounded-lg min-h-[100px]">
               <div className="text-2xl font-bold text-emerald">
                 ${data.summary.totalCostMin}-${data.summary.totalCostMax}
               </div>
-              <div className="text-sm text-muted-foreground">Est. Monthly Cost Range</div>
-              <div className="text-xs text-muted-foreground/80 space-y-0.5">
+              <div className="text-sm text-muted-foreground mt-1">Est. Monthly Cost Range</div>
+              <div className="text-xs text-muted-foreground/80 mt-2 text-center space-y-0.5">
                 <div>Tools: ${data.summary.toolSubscriptionCostMin}-${data.summary.toolSubscriptionCostMax}</div>
                 {(data.summary.infrastructureCostMin > 0 || data.summary.infrastructureCostMax > 0) && (
                   <div>Infrastructure: ${data.summary.infrastructureCostMin}-${data.summary.infrastructureCostMax}</div>
@@ -339,7 +339,7 @@ export default function AnalysisResults({ data, onNewAnalysis, hideShareButton =
               </div>
               {data.summary.costClassification && (
                 <Badge 
-                  className={getCostClassificationColor(data.summary.costClassification)}
+                  className={`mt-2 ${getCostClassificationColor(data.summary.costClassification)}`}
                   data-testid={`badge-cost-${data.summary.costClassification.toLowerCase()}`}
                 >
                   {data.summary.costClassificationLabel || data.summary.costClassification}
@@ -349,7 +349,7 @@ export default function AnalysisResults({ data, onNewAnalysis, hideShareButton =
           </div>
           
           {analysisId && (
-            <div className="mt-4 pt-4 border-t flex items-center justify-center gap-2">
+            <div className="mt-6 pt-4 border-t flex items-center justify-center gap-3">
               <span className="text-sm text-muted-foreground">Was this analysis helpful?</span>
               <FeedbackButton 
                 analysisId={analysisId} 
@@ -400,12 +400,12 @@ export default function AnalysisResults({ data, onNewAnalysis, hideShareButton =
           <div className="space-y-4">
             {data.experiments.map((experiment, index) => (
               <Card key={experiment.id} className="hover-elevate">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-lg">{experiment.title}</CardTitle>
+                <CardHeader className="pb-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-lg leading-snug">{experiment.title}</CardTitle>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       {analysisId && (
                         <FeedbackButton 
                           analysisId={analysisId} 
@@ -418,21 +418,21 @@ export default function AnalysisResults({ data, onNewAnalysis, hideShareButton =
                       </Badge>
                     </div>
                   </div>
-                  <CardDescription>{experiment.description}</CardDescription>
+                  <CardDescription className="mt-1.5">{experiment.description}</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-2">
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center justify-between text-sm gap-2">
                       <span className="text-muted-foreground">Timestamp: {experiment.timestamp}</span>
-                      <span className="font-medium text-emerald">
+                      <span className="font-medium text-emerald whitespace-nowrap">
                         ${experiment.estimatedCostMin}-${experiment.estimatedCostMax}/mo
                       </span>
                     </div>
-                    <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-wrap gap-1.5">
                       {experiment.tools.map((toolId) => {
                         const tool = data.tools.find(t => t.id === toolId);
                         return (
-                          <Badge key={toolId} variant="secondary" className="text-xs">
+                          <Badge key={toolId} variant="secondary" className="text-xs" data-testid={`badge-tool-${toolId}`}>
                             {tool?.name || toolId}
                           </Badge>
                         );
@@ -448,118 +448,112 @@ export default function AnalysisResults({ data, onNewAnalysis, hideShareButton =
         {/* Tools Section */}
         <div className="space-y-4">
           <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-primary" />
+            <TrendingUp className="w-5 h-5 text-emerald" />
             Required Tools
           </h2>
           <div className="space-y-4">
             {data.tools.map((tool) => (
               <Card key={tool.id} className="hover-elevate">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1 flex-1">
-                      <CardTitle className="text-lg flex items-center gap-2">
+                <CardHeader className="pb-2">
+                  {/* Tool header with name, badges, and pricing */}
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-2 flex-1 min-w-0">
+                      <CardTitle className="text-lg flex items-center gap-2 leading-snug">
                         {tool.name}
                         <a 
                           href={tool.url} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="text-muted-foreground hover:text-primary"
+                          className="text-muted-foreground hover:text-primary flex-shrink-0"
                           data-testid={`link-tool-${tool.id}`}
                         >
                           <ExternalLink className="w-4 h-4" />
                         </a>
                       </CardTitle>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-1.5">
                         <Badge variant="outline">{tool.category}</Badge>
                         <Badge className={getDifficultyColor(tool.difficulty)}>
                           {tool.difficulty}
                         </Badge>
                       </div>
                     </div>
-                    {analysisId && (
-                      <FeedbackButton 
-                        analysisId={analysisId} 
-                        feedbackType="tool"
-                        targetId={tool.name}
-                      />
-                    )}
-                    <div className="text-right space-y-1">
-                      {/* Two-line pricing hierarchy: free tier first, optional paid second */}
-                      {tool.pricing.free ? (
-                        <div className="space-y-1">
-                          {/* Primary line: Free tier headline */}
-                          <div className="flex items-center justify-end gap-2">
-                            <Badge variant="secondary" className="bg-emerald text-emerald-foreground">
-                              Free
-                            </Badge>
-                            {tool.pricing.pricingSource === 'ai-estimated' && (
-                              <Badge variant="outline" className="text-xs" title="Pricing estimated via AI analysis">
-                                AI Estimated
+                    
+                    {/* Pricing column - fixed width for alignment */}
+                    <div className="flex items-start gap-3 flex-shrink-0">
+                      {analysisId && (
+                        <FeedbackButton 
+                          analysisId={analysisId} 
+                          feedbackType="tool"
+                          targetId={tool.name}
+                        />
+                      )}
+                      <div className="text-right min-w-[100px]">
+                        {tool.pricing.free ? (
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <Badge variant="secondary" className="bg-emerald text-emerald-foreground">
+                                Free
                               </Badge>
-                            )}
-                          </div>
-                          {tool.pricing.tierName && (
-                            <div className="text-xs text-muted-foreground">
-                              {tool.pricing.tierName}
-                            </div>
-                          )}
-                          
-                          {/* Secondary line: Optional paid tier if available */}
-                          {tool.pricing.monthlyMin && tool.pricing.monthlyMin > 0 && (
-                            <div className="text-xs text-muted-foreground mt-1">
-                              Optional: {tool.pricing.monthlyMax 
-                                ? `$${tool.pricing.monthlyMin}-${tool.pricing.monthlyMax}/mo` 
-                                : `$${tool.pricing.monthlyMin}+/mo`}
-                              {tool.pricing.priceType === 'usage-based' && ' (usage-based)'}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="text-right space-y-1">
-                          {/* Paid tier headline */}
-                          <div className="flex items-center justify-end gap-2">
-                            <div className="font-semibold text-foreground">
-                              {tool.pricing.monthlyMin && tool.pricing.monthlyMax ? (
-                                `$${tool.pricing.monthlyMin}-${tool.pricing.monthlyMax}/mo`
-                              ) : tool.pricing.monthlyMin ? (
-                                `$${tool.pricing.monthlyMin}+/mo`
-                              ) : (
-                                'Contact for pricing'
+                              {tool.pricing.pricingSource === 'ai-estimated' && (
+                                <Badge variant="outline" className="text-xs" title="Pricing estimated via AI analysis">
+                                  AI Est.
+                                </Badge>
                               )}
                             </div>
-                            {tool.pricing.pricingSource === 'ai-estimated' && (
-                              <Badge variant="outline" className="text-xs" title="Pricing estimated via AI analysis">
-                                AI Estimated
-                              </Badge>
+                            {tool.pricing.tierName && (
+                              <div className="text-xs text-muted-foreground">
+                                {tool.pricing.tierName}
+                              </div>
+                            )}
+                            {tool.pricing.monthlyMin && tool.pricing.monthlyMin > 0 && (
+                              <div className="text-xs text-muted-foreground">
+                                Paid: {tool.pricing.monthlyMax 
+                                  ? `$${tool.pricing.monthlyMin}-${tool.pricing.monthlyMax}` 
+                                  : `$${tool.pricing.monthlyMin}+`}
+                              </div>
                             )}
                           </div>
-                          {tool.pricing.tierName && (
-                            <Badge variant="outline" className="text-xs">
-                              {tool.pricing.tierName}
-                            </Badge>
-                          )}
-                          {tool.pricing.priceType && (
-                            <div className="text-xs text-muted-foreground">
-                              {tool.pricing.priceType === 'usage-based' && 'Usage-based'}
-                              {tool.pricing.priceType === 'per-token' && 'Per-token'}
-                              {tool.pricing.priceType === 'fixed' && 'Fixed price'}
+                        ) : (
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <span className="font-semibold text-foreground whitespace-nowrap">
+                                {tool.pricing.monthlyMin && tool.pricing.monthlyMax ? (
+                                  `$${tool.pricing.monthlyMin}-${tool.pricing.monthlyMax}/mo`
+                                ) : tool.pricing.monthlyMin ? (
+                                  `$${tool.pricing.monthlyMin}+/mo`
+                                ) : (
+                                  'Contact'
+                                )}
+                              </span>
+                              {tool.pricing.pricingSource === 'ai-estimated' && (
+                                <Badge variant="outline" className="text-xs" title="Pricing estimated via AI analysis">
+                                  AI Est.
+                                </Badge>
+                              )}
                             </div>
-                          )}
-                          {tool.pricing.usage && (
-                            <div className="text-xs text-muted-foreground">
-                              {tool.pricing.usage}
-                            </div>
-                          )}
-                        </div>
-                      )}
+                            {tool.pricing.tierName && (
+                              <div className="text-xs text-muted-foreground">
+                                {tool.pricing.tierName}
+                              </div>
+                            )}
+                            {tool.pricing.priceType && (
+                              <div className="text-xs text-muted-foreground">
+                                {tool.pricing.priceType === 'usage-based' && 'Usage-based'}
+                                {tool.pricing.priceType === 'per-token' && 'Per-token'}
+                                {tool.pricing.priceType === 'fixed' && 'Fixed price'}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <CardDescription>{tool.description}</CardDescription>
+                  <CardDescription className="mt-2">{tool.description}</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
+                <CardContent className="pt-2">
+                  <div className="space-y-4">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Clock className="w-4 h-4" />
+                      <Clock className="w-4 h-4 flex-shrink-0" />
                       <span>Implementation time: {tool.timeToImplement}</span>
                     </div>
                     
@@ -567,11 +561,11 @@ export default function AnalysisResults({ data, onNewAnalysis, hideShareButton =
                     
                     <div>
                       <h4 className="text-sm font-medium text-foreground mb-2">Key Features:</h4>
-                      <ul className="text-sm text-muted-foreground space-y-1">
+                      <ul className="text-sm text-muted-foreground space-y-1.5">
                         {tool.pricing.features.map((feature, index) => (
                           <li key={index} className="flex items-start gap-2">
-                            <Star className="w-3 h-3 mt-0.5 text-amber flex-shrink-0" />
-                            {feature}
+                            <Star className="w-3 h-3 mt-1 text-amber flex-shrink-0" />
+                            <span>{feature}</span>
                           </li>
                         ))}
                       </ul>
@@ -580,12 +574,12 @@ export default function AnalysisResults({ data, onNewAnalysis, hideShareButton =
                     {tool.suggestedContext && tool.pricing.pricingSource === 'ai-estimated' && (
                       <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border-l-2 border-blue-500">
                         <div className="flex items-center gap-2 mb-1">
-                          <AlertCircle className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                          <AlertCircle className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
                           <h4 className="text-sm font-medium text-foreground">AI Pricing Estimate:</h4>
                         </div>
                         <p className="text-xs text-muted-foreground">{tool.suggestedContext}</p>
                         <p className="text-xs text-muted-foreground mt-1 italic">
-                          This pricing is estimated from AI analysis. Verify on the official website.
+                          Verify pricing on the official website.
                         </p>
                       </div>
                     )}
@@ -593,9 +587,9 @@ export default function AnalysisResults({ data, onNewAnalysis, hideShareButton =
                     {tool.pricing.allTiers && tool.pricing.allTiers.length > 1 && (
                       <div>
                         <h4 className="text-sm font-medium text-foreground mb-2">Available Pricing Tiers:</h4>
-                        <div className="space-y-2">
+                        <div className="space-y-1.5">
                           {tool.pricing.allTiers.map((tier, index) => (
-                            <div key={index} className="flex items-center justify-between text-xs p-2 bg-muted/30 rounded">
+                            <div key={index} className="flex items-center justify-between text-xs p-2.5 bg-muted/30 rounded">
                               <div className="flex items-center gap-2">
                                 <span className="font-medium text-foreground">{tier.tier}</span>
                                 {tier.priceType === 'free' && (
@@ -625,9 +619,9 @@ export default function AnalysisResults({ data, onNewAnalysis, hideShareButton =
                     {tool.mentioned.length > 0 && (
                       <div>
                         <h4 className="text-sm font-medium text-foreground mb-2">Mentioned in:</h4>
-                        <div className="flex flex-wrap gap-1">
+                        <div className="flex flex-wrap gap-1.5">
                           {tool.mentioned.map((mention, index) => (
-                            <Badge key={index} variant="outline" className="text-xs">
+                            <Badge key={index} variant="outline" className="text-xs" data-testid={`badge-mention-${index}`}>
                               {mention}
                             </Badge>
                           ))}
