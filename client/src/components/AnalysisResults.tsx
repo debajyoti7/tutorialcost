@@ -272,10 +272,6 @@ export default function AnalysisResults({ data, onNewAnalysis, hideShareButton =
             <div className="space-y-1.5 flex-1 min-w-0">
               <CardTitle className="text-xl leading-tight">{data.contentInfo.title}</CardTitle>
               <CardDescription className="flex items-center gap-3 flex-wrap">
-                <span className="flex items-center gap-1.5 text-sm">
-                  <Clock className="w-4 h-4" />
-                  {data.contentInfo.duration}
-                </span>
                 <Badge variant="outline">{data.contentInfo.platform}</Badge>
                 <span className="text-muted-foreground text-sm">
                   Processed in {data.processingTime}s
