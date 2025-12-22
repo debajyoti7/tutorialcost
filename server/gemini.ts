@@ -8,6 +8,47 @@ import { GoogleGenAI } from "@google/genai";
 // This API key is from Gemini Developer API Key, not vertex AI API Key
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
+// Exponential backoff retry wrapper for handling 429 rate limit errors
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  options: { maxRetries?: number; baseDelayMs?: number; operationName?: string } = {}
+): Promise<T> {
+  const { maxRetries = 3, baseDelayMs = 1000, operationName = 'API call' } = options;
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message.toLowerCase() : '';
+      const isRateLimitError = error instanceof Error && (
+        errorMessage.includes('429') ||
+        errorMessage.includes('quota') ||
+        errorMessage.includes('resource_exhausted') ||
+        errorMessage.includes('rate limit') ||
+        errorMessage.includes('too many requests')
+      );
+      
+      if (!isRateLimitError || attempt === maxRetries) {
+        throw error;
+      }
+      
+      const delayMs = baseDelayMs * Math.pow(2, attempt);
+      console.log(`${operationName} hit rate limit (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delayMs}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+  
+  throw new Error(`${operationName} failed after ${maxRetries + 1} attempts`);
+}
+
+// Custom error class to signal upstream that we hit quota limits
+export class QuotaExceededError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'QuotaExceededError';
+  }
+}
+
 export interface AnalysisResult {
   experiments: {
     id: string;
@@ -120,84 +161,87 @@ ${transcript.slice(0, 15000)} ${transcript.length > 15000 ? "...[truncated]" : "
 
 Analyze this content and identify LLM experiments and tools as specified.`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash", //"gemini-2.5-pro",
-      config: {
-        systemInstruction: systemPrompt,
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: "object",
-          properties: {
-            experiments: {
-              type: "array",
-              items: {
+    const response = await withRetry(
+      () => ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        config: {
+          systemInstruction: systemPrompt,
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "object",
+            properties: {
+              experiments: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    id: { type: "string" },
+                    title: { type: "string" },
+                    description: { type: "string" },
+                    timestamp: { type: "string" },
+                    tools: { type: "array", items: { type: "string" } },
+                    complexity: { type: "string" },
+                    usagePattern: { type: "string" },
+                  },
+                  required: [
+                    "id",
+                    "title",
+                    "description",
+                    "timestamp",
+                    "tools",
+                    "complexity",
+                    "usagePattern",
+                  ],
+                },
+              },
+              tools: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    id: { type: "string" },
+                    name: { type: "string" },
+                    category: { type: "string" },
+                    description: { type: "string" },
+                    mentioned: { type: "array", items: { type: "string" } },
+                    suggestedTier: { type: "string" },
+                    deploymentType: { type: "string" },
+                    confidence: { type: "string" },
+                  },
+                  required: [
+                    "id",
+                    "name",
+                    "category",
+                    "description",
+                    "mentioned",
+                    "deploymentType",
+                    "confidence",
+                  ],
+                },
+              },
+              summary: {
                 type: "object",
                 properties: {
-                  id: { type: "string" },
-                  title: { type: "string" },
-                  description: { type: "string" },
-                  timestamp: { type: "string" },
-                  tools: { type: "array", items: { type: "string" } },
-                  complexity: { type: "string" },
-                  usagePattern: { type: "string" },
+                  totalExperiments: { type: "number" },
+                  totalToolsRequired: { type: "number" },
+                  implementationTimeEstimate: { type: "string" },
+                  difficultyLevel: { type: "string" },
                 },
                 required: [
-                  "id",
-                  "title",
-                  "description",
-                  "timestamp",
-                  "tools",
-                  "complexity",
-                  "usagePattern",
+                  "totalExperiments",
+                  "totalToolsRequired",
+                  "implementationTimeEstimate",
+                  "difficultyLevel",
                 ],
               },
             },
-            tools: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  id: { type: "string" },
-                  name: { type: "string" },
-                  category: { type: "string" },
-                  description: { type: "string" },
-                  mentioned: { type: "array", items: { type: "string" } },
-                  suggestedTier: { type: "string" },
-                  deploymentType: { type: "string" },
-                  confidence: { type: "string" },
-                },
-                required: [
-                  "id",
-                  "name",
-                  "category",
-                  "description",
-                  "mentioned",
-                  "deploymentType",
-                  "confidence",
-                ],
-              },
-            },
-            summary: {
-              type: "object",
-              properties: {
-                totalExperiments: { type: "number" },
-                totalToolsRequired: { type: "number" },
-                implementationTimeEstimate: { type: "string" },
-                difficultyLevel: { type: "string" },
-              },
-              required: [
-                "totalExperiments",
-                "totalToolsRequired",
-                "implementationTimeEstimate",
-                "difficultyLevel",
-              ],
-            },
+            required: ["experiments", "tools", "summary"],
           },
-          required: ["experiments", "tools", "summary"],
         },
-      },
-      contents: prompt,
-    });
+        contents: prompt,
+      }),
+      { operationName: 'Content analysis' }
+    );
 
     const rawJson = response.text;
     console.log(`Gemini analysis response: ${rawJson?.slice(0, 500)}...`);
@@ -210,6 +254,21 @@ Analyze this content and identify LLM experiments and tools as specified.`;
     }
   } catch (error) {
     console.error("Gemini analysis failed:", error);
+    
+    // Check if this is a quota error and throw specific error type
+    const errorMessage = error instanceof Error ? error.message.toLowerCase() : '';
+    const isQuotaError = error instanceof Error && (
+      errorMessage.includes('429') ||
+      errorMessage.includes('quota') ||
+      errorMessage.includes('resource_exhausted') ||
+      errorMessage.includes('rate limit') ||
+      errorMessage.includes('too many requests')
+    );
+    
+    if (isQuotaError) {
+      throw new QuotaExceededError('API quota exceeded. Please try again in a few minutes.');
+    }
+    
     throw new Error(
       `Failed to analyze content: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
@@ -253,25 +312,28 @@ YouTube Video URL: ${videoUrl}
 
 Provide the complete transcription:`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [
-        {
-          role: "user",
-          parts: [
-            {
-              fileData: {
-                fileUri: videoUrl,
-                mimeType: "video/*"
+    const response = await withRetry(
+      () => ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                fileData: {
+                  fileUri: videoUrl,
+                  mimeType: "video/*"
+                }
+              },
+              {
+                text: prompt
               }
-            },
-            {
-              text: prompt
-            }
-          ]
-        }
-      ]
-    });
+            ]
+          }
+        ]
+      }),
+      { operationName: 'Video transcription', maxRetries: 2 }
+    );
 
     const transcript = response.text;
     
@@ -283,6 +345,21 @@ Provide the complete transcription:`;
     return transcript;
   } catch (error) {
     console.error('Gemini video transcription failed:', error);
+    
+    // Check if this is a quota error and throw specific error type
+    const errorMessage = error instanceof Error ? error.message.toLowerCase() : '';
+    const isQuotaError = error instanceof Error && (
+      errorMessage.includes('429') ||
+      errorMessage.includes('quota') ||
+      errorMessage.includes('resource_exhausted') ||
+      errorMessage.includes('rate limit') ||
+      errorMessage.includes('too many requests')
+    );
+    
+    if (isQuotaError) {
+      throw new QuotaExceededError('API quota exceeded during video transcription. Please try again later.');
+    }
+    
     throw new Error(`Failed to transcribe video with AI: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }

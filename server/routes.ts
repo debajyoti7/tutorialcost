@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { extractYouTubeContent, extractPodcastContent, detectPlatform, validateUrl } from "./contentExtractor";
-import { analyzeContentForLLMExperiments } from "./gemini";
+import { analyzeContentForLLMExperiments, QuotaExceededError } from "./gemini";
 import { insertAnalysisSchema, insertFeedbackSchema } from "@shared/schema";
 import { z } from "zod";
 import { AnalysisError, createNoExperimentsError, createInvalidUrlError, createUnsupportedPlatformError } from "./errors";
@@ -628,6 +628,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Analysis failed:', error);
       const processingTime = Math.round((Date.now() - startTime) / 1000);
+      
+      // Handle quota exceeded errors with user-friendly message
+      if (error instanceof QuotaExceededError) {
+        return res.status(429).json({
+          type: 'quota-exceeded',
+          message: 'Service temporarily busy',
+          details: 'Too many requests are being processed. Please wait a moment and try again.',
+          processingTime
+        });
+      }
       
       // Handle structured errors
       if (error instanceof AnalysisError) {

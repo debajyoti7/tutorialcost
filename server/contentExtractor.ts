@@ -7,7 +7,7 @@ import {
   createUnsupportedPlatformError,
   createNetworkError 
 } from './errors';
-import { transcribeVideoWithGemini } from './gemini';
+import { transcribeVideoWithGemini, QuotaExceededError } from './gemini';
 
 export interface ContentInfo {
   title: string;
@@ -88,6 +88,11 @@ export async function extractYouTubeContent(url: string): Promise<ContentInfo> {
           console.log('Successfully transcribed video with Gemini AI');
         }
       } catch (aiError) {
+        // Fail-fast: If quota exceeded, stop immediately - no point continuing to analysis
+        if (aiError instanceof QuotaExceededError) {
+          console.error('Quota exceeded during transcription, failing fast');
+          throw aiError;
+        }
         console.log('Gemini transcription also failed:', aiError);
       }
     }
