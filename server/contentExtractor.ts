@@ -435,8 +435,11 @@ async function fetchYouTubeTranscriptDirect(videoId: string): Promise<Transcript
     }
   ];
   
-  // YouTube's public InnerTube API key (publicly embedded in YouTube's web player)
-const innertubeApiKey = process.env.YOUTUBE_INNERTUBE_API_KEY || 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8';
+  const innertubeApiKey = process.env.YOUTUBE_INNERTUBE_API_KEY;
+  if (!innertubeApiKey) {
+    console.log('YOUTUBE_INNERTUBE_API_KEY not configured, skipping InnerTube extraction');
+    return null;
+  }
 const playerUrl = `https://www.youtube.com/youtubei/v1/player?key=${innertubeApiKey}`;
   
   for (const config of clientConfigs) {
