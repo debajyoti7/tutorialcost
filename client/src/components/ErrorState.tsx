@@ -13,6 +13,7 @@ export type ErrorType =
   | 'empty-content'
   | 'unsupported-platform'
   | 'gemini-error'
+  | 'quota-exceeded'
   | 'generic';
 
 interface ErrorStateProps {
@@ -119,6 +120,18 @@ const errorConfigs = {
       'The content might be too complex or unclear for analysis'
     ]
   },
+  'quota-exceeded': {
+    icon: AlertCircle,
+    title: 'Service Busy',
+    description: 'Too many requests are being processed right now.',
+    color: 'text-yellow-600 dark:text-yellow-400',
+    bgColor: 'bg-yellow-50 dark:bg-yellow-950/30',
+    suggestions: [
+      'Wait a minute and try again',
+      'The service is experiencing high demand',
+      'Consider adding your own API key in Settings for unlimited access'
+    ]
+  },
   'generic': {
     icon: HelpCircle,
     title: 'Analysis Failed',
@@ -139,7 +152,7 @@ export default function ErrorState({
   onRetry, 
   onNewAnalysis 
 }: ErrorStateProps) {
-  const config = errorConfigs[errorType];
+  const config = errorConfigs[errorType] || errorConfigs['generic'];
   const Icon = config.icon;
 
   return (

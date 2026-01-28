@@ -66,7 +66,7 @@ export async function extractYouTubeContent(url: string, userApiKey?: string): P
     
     try {
       transcriptItems = await fetchYouTubeTranscriptDirect(videoId);
-      hasTranscript = transcriptItems.length > 0;
+      hasTranscript = transcriptItems && transcriptItems.length > 0;
       if (hasTranscript) {
         console.log('Successfully extracted transcript with direct fetch');
         transcriptSource = 'youtube';
@@ -438,7 +438,7 @@ async function fetchYouTubeTranscriptDirect(videoId: string): Promise<Transcript
   const innertubeApiKey = process.env.YOUTUBE_INNERTUBE_API_KEY;
   if (!innertubeApiKey) {
     console.log('YOUTUBE_INNERTUBE_API_KEY not configured, skipping InnerTube extraction');
-    return null;
+    return [];
   }
 const playerUrl = `https://www.youtube.com/youtubei/v1/player?key=${innertubeApiKey}`;
   
