@@ -11,9 +11,10 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { analyzeContent } from "@/lib/api";
+import { analyzeContent, AnalysisError } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Sparkles, ArrowRight, TrendingUp, Zap, DollarSign } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
 type AppState = 'input' | 'loading' | 'results' | 'error';
 
@@ -209,20 +210,45 @@ export default function Home() {
     } catch (error: any) {
       console.error('Analysis failed:', error);
       
-      // Extract error information from response
-      const errorType = error.response?.data?.type || 'generic';
-      const errorMessage = error.response?.data?.message || (error instanceof Error ? error.message : "An error occurred during analysis");
-      const errorDetails = error.response?.data?.details;
-      
-      setErrorData({
-        type: errorType as ErrorType,
-        message: errorMessage,
-        details: errorDetails
-      });
-      setState('error');
-      
-      // Only show toast for unexpected errors
-      if (errorType === 'generic' || errorType === 'api-error') {
+      // Handle AnalysisError with type information
+      if (error instanceof AnalysisError) {
+        // Check for authentication required error
+        if (error.type === 'authentication_required') {
+          toast({
+            title: "Sign in required",
+            description: "Sign in with Google to analyze videos, or add your own API key in Settings.",
+            variant: "destructive",
+          });
+          setState('input');
+          return;
+        }
+        
+        setErrorData({
+          type: error.type as ErrorType,
+          message: error.message,
+          details: error.details
+        });
+        setState('error');
+        
+        // Only show toast for unexpected errors
+        if (error.type === 'generic' || error.type === 'api-error') {
+          toast({
+            title: "Analysis Failed",
+            description: error.message,
+            variant: "destructive",
+          });
+        }
+      } else {
+        // Fallback for non-AnalysisError errors
+        const errorMessage = error instanceof Error ? error.message : "An error occurred during analysis";
+        
+        setErrorData({
+          type: 'generic' as ErrorType,
+          message: errorMessage,
+          details: undefined
+        });
+        setState('error');
+        
         toast({
           title: "Analysis Failed",
           description: errorMessage,

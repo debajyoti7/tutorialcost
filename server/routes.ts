@@ -11,6 +11,7 @@ import path from "path";
 import fs from "fs";
 import { execSync } from "child_process";
 import "express-session"; // Import for type augmentation
+import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
 
 // Hash session ID for privacy (HMAC-SHA256)
 function hashSessionId(sessionId: string): string {
@@ -297,6 +298,10 @@ function parsePricingFromContext(suggestedContext?: string): {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup authentication (BEFORE registering other routes)
+  await setupAuth(app);
+  registerAuthRoutes(app);
+  
   // Validation schemas
   const analyzeRequestSchema = z.object({
     url: z.string().url("Please enter a valid URL")
@@ -312,6 +317,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Extract user's API key from header (optional - will fall back to server key)
       const userApiKey = req.headers['x-gemini-api-key'] as string | undefined;
+      
+      // If no user API key provided, require authentication to use server's key
+      if (!userApiKey) {
+        const user = req.user as any;
+        const isUserAuthenticated = req.isAuthenticated?.() && user?.claims?.sub;
+        
+        // Also check token expiry to prevent stale sessions
+        const now = Math.floor(Date.now() / 1000);
+        const isTokenValid = user?.expires_at && now <= user.expires_at;
+        
+        if (!isUserAuthenticated || !isTokenValid) {
+          const processingTime = Math.round((Date.now() - startTime) / 1000);
+          return res.status(401).json({
+            type: 'authentication_required',
+            message: 'Sign in required',
+            details: 'Please sign in with Google to analyze videos, or add your own Gemini API key in Settings.',
+            processingTime
+          });
+        }
+      }
       
       // Validate URL format and platform
       const urlValidation = validateUrl(url);

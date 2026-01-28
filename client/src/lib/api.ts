@@ -73,8 +73,22 @@ export interface AnalysisResponse {
 }
 
 export interface ApiError {
-  error: string;
+  error?: string;
+  type?: string;
+  message?: string;
+  details?: string;
   processingTime?: number;
+}
+
+export class AnalysisError extends Error {
+  type: string;
+  details?: string;
+  
+  constructor(type: string, message: string, details?: string) {
+    super(message);
+    this.type = type;
+    this.details = details;
+  }
 }
 
 const API_KEY_STORAGE_KEY = 'gemini_api_key';
@@ -96,12 +110,17 @@ export async function analyzeContent(url: string): Promise<AnalysisResponse> {
   const response = await fetch('/api/analyze', {
     method: 'POST',
     headers,
+    credentials: 'include',
     body: JSON.stringify({ url }),
   });
 
   if (!response.ok) {
     const errorData: ApiError = await response.json();
-    throw new Error(errorData.error || 'Analysis failed');
+    throw new AnalysisError(
+      errorData.type || 'unknown_error',
+      errorData.message || errorData.error || 'Analysis failed',
+      errorData.details
+    );
   }
 
   return response.json();

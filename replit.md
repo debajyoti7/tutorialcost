@@ -28,7 +28,19 @@ The application uses Drizzle ORM with PostgreSQL as the primary database. The sc
 Data is structured to support caching of analysis results, preventing duplicate processing of the same content URLs. The tool database serves as a reference system with multi-tier pricing structures for each tool. Each tool can have multiple pricing tiers (e.g., Free, Starter, Pro, Enterprise) with different pricing types (free, fixed monthly, usage-based ranges, per-token costs), enabling accurate cost estimates across different use cases and scales.
 
 ### Authentication and Authorization
-Currently implements a basic session-based authentication system using PostgreSQL session storage with connect-pg-simple. The system includes user management capabilities but appears to be in early development stages, with the main focus on content analysis functionality.
+The application uses Replit Auth with OpenID Connect for user authentication, supporting Google Sign-In (plus GitHub, Apple, and email/password). Session management uses PostgreSQL storage with connect-pg-simple.
+
+**Access Control for Analysis:**
+- Users with their own Gemini API key (stored in browser/extension) can analyze without signing in
+- Signed-in users can use the server's fallback Gemini API key
+- Anonymous users without an API key are prompted to sign in or add their own key
+
+**Bring Your Own Key (BYOK):**
+- Users can configure their own Gemini API key in the Settings dialog (web) or settings panel (Chrome extension)
+- API keys are stored locally (localStorage for web, chrome.storage.sync for extension)
+- Keys are sent to the server only during API calls and are never persisted server-side
+
+This tiered access model allows free public usage while protecting the server's API quota for verified users.
 
 ### Content Processing Pipeline
 The content extraction system supports multiple platforms through specialized handlers. YouTube content uses the youtube-transcript library for automated transcript extraction, while podcast support is designed for various audio platforms. The processing pipeline validates URLs, extracts content, performs AI analysis, and structures results for frontend consumption.
