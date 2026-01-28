@@ -16,7 +16,11 @@ import { useToast } from "@/hooks/use-toast";
 import { Sparkles, ArrowRight, TrendingUp, Zap, DollarSign } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
-type AppState = 'input' | 'loading' | 'results' | 'error';
+type AppState = 'input' | 'loading' | 'loading-failed' | 'results' | 'error';
+
+interface LoadingFailedData {
+  failedAtStep: number;
+}
 
 interface ErrorData {
   type: ErrorType;
@@ -178,14 +182,37 @@ export default function Home() {
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
   const [analysisId, setAnalysisId] = useState<string | null>(null);
   const [errorData, setErrorData] = useState<ErrorData | null>(null);
+  const [loadingFailedData, setLoadingFailedData] = useState<LoadingFailedData | null>(null);
   const [lastUrl, setLastUrl] = useState<string>('');
   const { toast } = useToast();
+  
+  const getFailedStepFromErrorType = (errorType: string): number => {
+    switch (errorType) {
+      case 'invalid-url':
+      case 'unsupported-platform':
+        return 0;
+      case 'transcript-disabled':
+      case 'empty-content':
+        return 1;
+      case 'gemini-error':
+      case 'quota-exceeded':
+      case 'api-error':
+        return 2;
+      case 'no-experiments':
+        return 3;
+      case 'network-error':
+      case 'generic':
+      default:
+        return 2;
+    }
+  };
 
   const handleAnalyze = async (url: string) => {
     console.log('Starting analysis for:', url);
     setLastUrl(url);
     setState('loading');
     setErrorData(null);
+    setLoadingFailedData(null);
     
     try {
       const result = await analyzeContent(url);
@@ -223,12 +250,20 @@ export default function Home() {
           return;
         }
         
+        const errorType = error.type as ErrorType;
+        const failedStep = getFailedStepFromErrorType(errorType);
+        
         setErrorData({
-          type: error.type as ErrorType,
+          type: errorType,
           message: error.message,
           details: error.details
         });
-        setState('error');
+        setLoadingFailedData({ failedAtStep: failedStep });
+        setState('loading-failed');
+        
+        setTimeout(() => {
+          setState('error');
+        }, 1500);
         
         // Only show toast for unexpected errors
         if (error.type === 'generic' || error.type === 'api-error') {
@@ -247,7 +282,12 @@ export default function Home() {
           message: errorMessage,
           details: undefined
         });
-        setState('error');
+        setLoadingFailedData({ failedAtStep: 2 });
+        setState('loading-failed');
+        
+        setTimeout(() => {
+          setState('error');
+        }, 1500);
         
         toast({
           title: "Analysis Failed",
@@ -294,6 +334,15 @@ export default function Home() {
         {state === 'loading' && (
           <div className="max-w-2xl mx-auto">
             <LoadingState />
+          </div>
+        )}
+        
+        {state === 'loading-failed' && loadingFailedData && (
+          <div className="max-w-2xl mx-auto">
+            <LoadingState 
+              hasFailed={true} 
+              failedAtStep={loadingFailedData.failedAtStep} 
+            />
           </div>
         )}
         
