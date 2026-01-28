@@ -7,14 +7,34 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+const API_KEY_STORAGE_KEY = 'gemini_api_key';
+
+function getStoredApiKey(): string | null {
+  return localStorage.getItem(API_KEY_STORAGE_KEY);
+}
+
 export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
+  options?: { includeApiKey?: boolean }
 ): Promise<Response> {
+  const headers: Record<string, string> = {};
+  
+  if (data) {
+    headers["Content-Type"] = "application/json";
+  }
+  
+  if (options?.includeApiKey) {
+    const apiKey = getStoredApiKey();
+    if (apiKey) {
+      headers["X-Gemini-Api-Key"] = apiKey;
+    }
+  }
+  
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers,
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });

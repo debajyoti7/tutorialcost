@@ -66,11 +66,21 @@ async function handleAnalysis(url, videoId) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
     
+    // Get user's API key from sync storage
+    const { geminiApiKey } = await chrome.storage.sync.get(['geminiApiKey']);
+    
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    
+    // Include API key if configured
+    if (geminiApiKey) {
+      headers['X-Gemini-Api-Key'] = geminiApiKey;
+    }
+    
     const response = await fetch(`${API_BASE_URL}/api/analyze`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers,
       body: JSON.stringify({ url }),
       signal: controller.signal
     });

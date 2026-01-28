@@ -20,7 +20,7 @@ export interface ContentInfo {
   transcriptSource: 'youtube' | 'ai-generated' | 'description-only';
 }
 
-export async function extractYouTubeContent(url: string): Promise<ContentInfo> {
+export async function extractYouTubeContent(url: string, userApiKey?: string): Promise<ContentInfo> {
   try {
     console.log('Extracting YouTube content from:', url);
     
@@ -81,7 +81,7 @@ export async function extractYouTubeContent(url: string): Promise<ContentInfo> {
     if (!hasTranscript) {
       try {
         console.log('Attempting AI transcription with Gemini...');
-        aiTranscript = await transcribeVideoWithGemini(url);
+        aiTranscript = await transcribeVideoWithGemini(url, userApiKey);
         if (aiTranscript && aiTranscript.length > 100) {
           hasTranscript = true;
           transcriptSource = 'ai-generated';

@@ -310,6 +310,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate request
       const { url } = analyzeRequestSchema.parse(req.body);
       
+      // Extract user's API key from header (optional - will fall back to server key)
+      const userApiKey = req.headers['x-gemini-api-key'] as string | undefined;
+      
       // Validate URL format and platform
       const urlValidation = validateUrl(url);
       if (!urlValidation.isValid) {
@@ -363,7 +366,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let contentInfo;
 
       if (platform === 'YouTube') {
-        contentInfo = await extractYouTubeContent(url);
+        contentInfo = await extractYouTubeContent(url, userApiKey);
       } else if (platform === 'Podcast') {
         contentInfo = await extractPodcastContent(url);
       } else {
@@ -382,7 +385,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Analyze content with Gemini AI
       const aiAnalysis = await analyzeContentForLLMExperiments(
         contentInfo.transcript, 
-        contentInfo.title
+        contentInfo.title,
+        userApiKey
       );
 
       // Ensure experiments and tools arrays exist

@@ -77,12 +77,25 @@ export interface ApiError {
   processingTime?: number;
 }
 
+const API_KEY_STORAGE_KEY = 'gemini_api_key';
+
+function getStoredApiKey(): string | null {
+  return localStorage.getItem(API_KEY_STORAGE_KEY);
+}
+
 export async function analyzeContent(url: string): Promise<AnalysisResponse> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  
+  const apiKey = getStoredApiKey();
+  if (apiKey) {
+    headers['X-Gemini-Api-Key'] = apiKey;
+  }
+  
   const response = await fetch('/api/analyze', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: JSON.stringify({ url }),
   });
 

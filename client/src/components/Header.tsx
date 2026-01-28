@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import logoIcon from "@assets/logo.png";
+import SettingsDialog from "./SettingsDialog";
 
 export default function Header() {
   const [location] = useLocation();
@@ -64,6 +65,8 @@ export default function Header() {
                 </Button>
               </motion.div>
             </Link>
+            
+            <SettingsDialog />
           </nav>
         </div>
       </div>

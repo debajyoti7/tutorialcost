@@ -115,8 +115,58 @@
     </main>
 
     <footer class="footer">
-      <a href="#" id="open-webapp" class="footer-link">Open Web App</a>
+      <div class="footer-row">
+        <a href="#" id="open-webapp" class="footer-link">Open Web App</a>
+        <button id="settings-btn" class="settings-btn" title="API Settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+          </svg>
+        </button>
+      </div>
     </footer>
+    
+    <div id="settings-panel" class="settings-panel hidden">
+      <div class="settings-header">
+        <h3>API Settings</h3>
+        <button id="close-settings" class="close-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="settings-content">
+        <div id="api-key-status" class="api-key-status">
+          <div id="key-configured" class="key-status configured hidden">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <span>API key configured</span>
+          </div>
+          <div id="key-not-configured" class="key-status not-configured">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span>No API key set</span>
+          </div>
+        </div>
+        <div class="input-group">
+          <label for="api-key-input">Gemini API Key</label>
+          <input type="password" id="api-key-input" placeholder="AIza...">
+        </div>
+        <p class="settings-help">
+          Your key is sent securely to our server for Gemini calls only. We don't store or log it. Get your free key from 
+          <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a>
+        </p>
+        <div class="settings-actions">
+          <button id="save-api-key" class="btn btn-primary btn-sm">Save Key</button>
+          <button id="remove-api-key" class="btn btn-secondary btn-sm">Remove</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="popup.js"></script>

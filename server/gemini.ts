@@ -5,8 +5,40 @@ import { GoogleGenAI } from "@google/genai";
 // - Note that the newest Gemini model series is "gemini-2.5-flash" or gemini-2.5-pro"
 //   - do not change this unless explicitly requested by the user
 
-// This API key is from Gemini Developer API Key, not vertex AI API Key
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+// Default API key from environment (fallback)
+const defaultApiKey = process.env.GEMINI_API_KEY || "";
+
+// Cache for user-provided API clients to avoid recreating on every request
+const clientCache = new Map<string, GoogleGenAI>();
+
+// Get or create a GoogleGenAI client for the given API key
+function getClient(userApiKey?: string): GoogleGenAI {
+  const apiKey = userApiKey || defaultApiKey;
+  
+  if (!apiKey) {
+    throw new Error("No API key provided. Please configure your Gemini API key.");
+  }
+  
+  // Return cached client if available
+  if (clientCache.has(apiKey)) {
+    return clientCache.get(apiKey)!;
+  }
+  
+  // Create and cache new client
+  const client = new GoogleGenAI({ apiKey });
+  clientCache.set(apiKey, client);
+  
+  // Limit cache size to prevent memory issues
+  if (clientCache.size > 100) {
+    const firstKey = clientCache.keys().next().value;
+    if (firstKey) clientCache.delete(firstKey);
+  }
+  
+  return client;
+}
+
+// Legacy default client for backward compatibility
+const ai = new GoogleGenAI({ apiKey: defaultApiKey });
 
 // Exponential backoff retry wrapper for handling 429 rate limit errors
 async function withRetry<T>(
@@ -80,8 +112,10 @@ export interface AnalysisResult {
 export async function analyzeContentForLLMExperiments(
   transcript: string,
   title: string,
+  userApiKey?: string,
 ): Promise<AnalysisResult> {
   try {
+    const client = getClient(userApiKey);
     const systemPrompt = `You are an expert AI researcher analyzing content to identify LLM experiments and tools mentioned.
 
 ═══ CRITICAL: YOUR ROLE ═══
@@ -162,7 +196,7 @@ ${transcript.slice(0, 15000)} ${transcript.length > 15000 ? "...[truncated]" : "
 Analyze this content and identify LLM experiments and tools as specified.`;
 
     const response = await withRetry(
-      () => ai.models.generateContent({
+      () => client.models.generateContent({
         model: "gemini-2.5-flash",
         config: {
           systemInstruction: systemPrompt,
@@ -294,8 +328,9 @@ export async function extractVideoTitle(url: string): Promise<string> {
   }
 }
 
-export async function transcribeVideoWithGemini(videoUrl: string): Promise<string> {
+export async function transcribeVideoWithGemini(videoUrl: string, userApiKey?: string): Promise<string> {
   try {
+    const client = getClient(userApiKey);
     console.log('Using Gemini to transcribe video:', videoUrl);
     
     const prompt = `You are a professional transcriptionist. Watch this YouTube video and provide a complete, accurate transcription of all spoken content.
@@ -313,7 +348,7 @@ YouTube Video URL: ${videoUrl}
 Provide the complete transcription:`;
 
     const response = await withRetry(
-      () => ai.models.generateContent({
+      () => client.models.generateContent({
         model: "gemini-2.5-flash",
         contents: [
           {

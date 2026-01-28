@@ -5,6 +5,86 @@ let currentVideoId = null;
 let currentAnalysisId = null;
 let statusCheckInterval = null;
 
+const settingsElements = {
+  panel: null,
+  btn: null,
+  closeBtn: null,
+  apiKeyInput: null,
+  saveBtn: null,
+  removeBtn: null,
+  keyConfigured: null,
+  keyNotConfigured: null
+};
+
+function initSettings() {
+  settingsElements.panel = document.getElementById('settings-panel');
+  settingsElements.btn = document.getElementById('settings-btn');
+  settingsElements.closeBtn = document.getElementById('close-settings');
+  settingsElements.apiKeyInput = document.getElementById('api-key-input');
+  settingsElements.saveBtn = document.getElementById('save-api-key');
+  settingsElements.removeBtn = document.getElementById('remove-api-key');
+  settingsElements.keyConfigured = document.getElementById('key-configured');
+  settingsElements.keyNotConfigured = document.getElementById('key-not-configured');
+  
+  settingsElements.btn?.addEventListener('click', toggleSettings);
+  settingsElements.closeBtn?.addEventListener('click', closeSettings);
+  settingsElements.saveBtn?.addEventListener('click', saveApiKey);
+  settingsElements.removeBtn?.addEventListener('click', removeApiKey);
+  
+  updateApiKeyStatus();
+}
+
+function toggleSettings() {
+  if (settingsElements.panel) {
+    settingsElements.panel.classList.toggle('hidden');
+  }
+}
+
+function closeSettings() {
+  if (settingsElements.panel) {
+    settingsElements.panel.classList.add('hidden');
+  }
+}
+
+async function updateApiKeyStatus() {
+  const result = await chrome.storage.sync.get(['geminiApiKey']);
+  const hasKey = Boolean(result.geminiApiKey);
+  
+  if (settingsElements.keyConfigured) {
+    settingsElements.keyConfigured.classList.toggle('hidden', !hasKey);
+  }
+  if (settingsElements.keyNotConfigured) {
+    settingsElements.keyNotConfigured.classList.toggle('hidden', hasKey);
+  }
+  if (settingsElements.btn) {
+    settingsElements.btn.classList.toggle('has-key', hasKey);
+  }
+}
+
+async function saveApiKey() {
+  const key = settingsElements.apiKeyInput?.value?.trim();
+  
+  if (!key) {
+    alert('Please enter an API key');
+    return;
+  }
+  
+  if (!key.startsWith('AIza')) {
+    alert('Invalid API key format. Gemini API keys start with "AIza"');
+    return;
+  }
+  
+  await chrome.storage.sync.set({ geminiApiKey: key });
+  settingsElements.apiKeyInput.value = '';
+  updateApiKeyStatus();
+  closeSettings();
+}
+
+async function removeApiKey() {
+  await chrome.storage.sync.remove(['geminiApiKey']);
+  updateApiKeyStatus();
+}
+
 const states = {
   notYoutube: document.getElementById('not-youtube'),
   videoDetected: document.getElementById('video-detected'),
@@ -260,4 +340,5 @@ window.addEventListener('unload', () => {
   stopStatusCheck();
 });
 
+initSettings();
 init();
