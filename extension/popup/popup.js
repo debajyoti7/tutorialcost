@@ -16,6 +16,19 @@ const settingsElements = {
   keyNotConfigured: null
 };
 
+const authElements = {
+  signedIn: null,
+  signedOut: null,
+  userAvatar: null,
+  userName: null,
+  signInBtn: null,
+  signOutBtn: null,
+  refreshBtn: null,
+  authHint: null
+};
+
+let currentUser = null;
+
 function initSettings() {
   settingsElements.panel = document.getElementById('settings-panel');
   settingsElements.btn = document.getElementById('settings-btn');
@@ -83,6 +96,88 @@ async function saveApiKey() {
 async function removeApiKey() {
   await chrome.storage.sync.remove(['geminiApiKey']);
   updateApiKeyStatus();
+}
+
+function initAuth() {
+  authElements.signedIn = document.getElementById('auth-signed-in');
+  authElements.signedOut = document.getElementById('auth-signed-out');
+  authElements.userAvatar = document.getElementById('user-avatar');
+  authElements.userName = document.getElementById('user-name');
+  authElements.signInBtn = document.getElementById('sign-in-btn');
+  authElements.signOutBtn = document.getElementById('sign-out-btn');
+  authElements.refreshBtn = document.getElementById('refresh-auth-btn');
+  authElements.authHint = document.getElementById('auth-hint');
+  
+  authElements.signInBtn?.addEventListener('click', handleSignIn);
+  authElements.signOutBtn?.addEventListener('click', handleSignOut);
+  authElements.refreshBtn?.addEventListener('click', handleRefreshAuth);
+  
+  checkAuthStatus();
+}
+
+async function checkAuthStatus() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/auth/user`, {
+      credentials: 'include'
+    });
+    
+    if (response.ok) {
+      currentUser = await response.json();
+      updateAuthUI(true);
+    } else {
+      currentUser = null;
+      updateAuthUI(false);
+    }
+  } catch (error) {
+    console.error('Auth check failed:', error);
+    currentUser = null;
+    updateAuthUI(false);
+  }
+}
+
+function updateAuthUI(isSignedIn) {
+  if (isSignedIn && currentUser) {
+    authElements.signedIn?.classList.remove('hidden');
+    authElements.signedOut?.classList.add('hidden');
+    
+    if (authElements.userAvatar) {
+      authElements.userAvatar.src = currentUser.profileImageUrl || '';
+      authElements.userAvatar.style.display = currentUser.profileImageUrl ? 'block' : 'none';
+    }
+    if (authElements.userName) {
+      const name = [currentUser.firstName, currentUser.lastName].filter(Boolean).join(' ') || currentUser.email || 'User';
+      authElements.userName.textContent = name;
+    }
+  } else {
+    authElements.signedIn?.classList.add('hidden');
+    authElements.signedOut?.classList.remove('hidden');
+  }
+}
+
+function handleSignIn() {
+  chrome.tabs.create({ url: `${API_BASE_URL}/api/login` });
+  if (authElements.authHint) {
+    authElements.authHint.classList.remove('hidden');
+  }
+}
+
+async function handleRefreshAuth() {
+  if (authElements.refreshBtn) {
+    authElements.refreshBtn.disabled = true;
+  }
+  await checkAuthStatus();
+  if (authElements.refreshBtn) {
+    authElements.refreshBtn.disabled = false;
+  }
+  if (currentUser && authElements.authHint) {
+    authElements.authHint.classList.add('hidden');
+  }
+}
+
+function handleSignOut() {
+  chrome.tabs.create({ url: `${API_BASE_URL}/api/logout` });
+  currentUser = null;
+  updateAuthUI(false);
 }
 
 const states = {
@@ -341,4 +436,5 @@ window.addEventListener('unload', () => {
 });
 
 initSettings();
+initAuth();
 init();

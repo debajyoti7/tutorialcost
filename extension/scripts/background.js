@@ -81,6 +81,7 @@ async function handleAnalysis(url, videoId) {
     const response = await fetch(`${API_BASE_URL}/api/analyze`, {
       method: 'POST',
       headers,
+      credentials: 'include',
       body: JSON.stringify({ url }),
       signal: controller.signal
     });

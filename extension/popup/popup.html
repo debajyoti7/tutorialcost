@@ -115,6 +115,30 @@
     </main>
 
     <footer class="footer">
+      <div class="auth-status" id="auth-status">
+        <div id="auth-signed-in" class="auth-row hidden">
+          <div class="user-info">
+            <img id="user-avatar" class="user-avatar" src="" alt="User">
+            <span id="user-name" class="user-name">User</span>
+          </div>
+          <button id="sign-out-btn" class="btn btn-secondary btn-sm">Sign Out</button>
+        </div>
+        <div id="auth-signed-out" class="auth-row-stack">
+          <div class="auth-row">
+            <span class="auth-prompt">Sign in to analyze without API key</span>
+            <div class="auth-buttons">
+              <button id="refresh-auth-btn" class="btn btn-secondary btn-sm" title="Refresh status">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                  <path d="M21 12a9 9 0 11-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
+                  <path d="M21 3v5h-5"/>
+                </svg>
+              </button>
+              <button id="sign-in-btn" class="btn btn-primary btn-sm">Sign In</button>
+            </div>
+          </div>
+          <p id="auth-hint" class="auth-hint hidden">After signing in, click refresh to update status</p>
+        </div>
+      </div>
       <div class="footer-row">
         <a href="#" id="open-webapp" class="footer-link">Open Web App</a>
         <button id="settings-btn" class="settings-btn" title="API Settings">

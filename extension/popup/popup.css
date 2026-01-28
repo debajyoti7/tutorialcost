@@ -339,6 +339,61 @@ body {
   text-align: center;
 }
 
+.auth-status {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.auth-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.user-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.auth-prompt {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.auth-row-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.auth-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.auth-hint {
+  font-size: 11px;
+  color: var(--amber);
+  margin: 0;
+  text-align: center;
+}
+
 .footer-link {
   font-size: 12px;
   color: var(--muted-foreground);
