@@ -362,12 +362,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Increment view count for cached analysis
         const updated = await storage.incrementViewCount(latest.id);
         
-        // If this is the first time this session is viewing this analysis and it doesn't have a session hash, add it
-        const sessionHash = req.sessionID ? hashSessionId(req.sessionID) : null;
-        if (sessionHash && !latest.sessionHash) {
-          await storage.updateAnalysisMetadata(latest.id, { });
-          // Note: We don't overwrite the original creator's session hash
-        }
         
         return res.json({
           id: latest.id,

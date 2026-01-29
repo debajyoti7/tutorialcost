@@ -981,6 +981,11 @@ export class DbStorage implements IStorage {
     if (metadata.isFavorite !== undefined) updates.isFavorite = metadata.isFavorite;
     if (metadata.notes !== undefined) updates.notes = metadata.notes;
     
+    if (Object.keys(updates).length === 0) {
+      const existing = await this.getAnalysis(id);
+      return existing;
+    }
+    
     const result = await this.db
       .update(analyses)
       .set(updates)
