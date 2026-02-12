@@ -91,10 +91,23 @@ export class AnalysisError extends Error {
   }
 }
 
-const API_KEY_STORAGE_KEY = 'gemini_api_key';
+const GEMINI_KEY_STORAGE = 'gemini_api_key';
+const OPENROUTER_KEY_STORAGE = 'openrouter_api_key';
+const PROVIDER_STORAGE = 'ai_provider';
+
+type AiProvider = 'gemini' | 'openrouter';
+
+function getStoredProvider(): AiProvider {
+  const stored = localStorage.getItem(PROVIDER_STORAGE);
+  return (stored === 'openrouter') ? 'openrouter' : 'gemini';
+}
 
 function getStoredApiKey(): string | null {
-  return localStorage.getItem(API_KEY_STORAGE_KEY);
+  const provider = getStoredProvider();
+  if (provider === 'openrouter') {
+    return localStorage.getItem(OPENROUTER_KEY_STORAGE);
+  }
+  return localStorage.getItem(GEMINI_KEY_STORAGE);
 }
 
 export async function analyzeContent(url: string): Promise<AnalysisResponse> {
@@ -102,9 +115,16 @@ export async function analyzeContent(url: string): Promise<AnalysisResponse> {
     'Content-Type': 'application/json',
   };
   
+  const provider = getStoredProvider();
   const apiKey = getStoredApiKey();
-  if (apiKey) {
+
+  if (provider === 'openrouter' && apiKey) {
+    headers['X-OpenRouter-Api-Key'] = apiKey;
+    headers['X-AI-Provider'] = 'openrouter';
+  } else if (provider === 'gemini' && apiKey) {
     headers['X-Gemini-Api-Key'] = apiKey;
+  } else if (provider === 'openrouter') {
+    headers['X-AI-Provider'] = 'openrouter';
   }
   
   const response = await fetch('/api/analyze', {

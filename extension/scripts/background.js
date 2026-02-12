@@ -66,16 +66,23 @@ async function handleAnalysis(url, videoId) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
     
-    // Get user's API key from sync storage
-    const { geminiApiKey } = await chrome.storage.sync.get(['geminiApiKey']);
+    const { geminiApiKey, openrouterApiKey, aiProvider } = await chrome.storage.sync.get([
+      'geminiApiKey', 'openrouterApiKey', 'aiProvider'
+    ]);
+    
+    const provider = aiProvider || 'gemini';
     
     const headers = {
       'Content-Type': 'application/json'
     };
     
-    // Include API key if configured
-    if (geminiApiKey) {
+    if (provider === 'openrouter' && openrouterApiKey) {
+      headers['X-OpenRouter-Api-Key'] = openrouterApiKey;
+      headers['X-AI-Provider'] = 'openrouter';
+    } else if (provider === 'gemini' && geminiApiKey) {
       headers['X-Gemini-Api-Key'] = geminiApiKey;
+    } else if (provider === 'openrouter') {
+      headers['X-AI-Provider'] = 'openrouter';
     }
     
     const response = await fetch(`${API_BASE_URL}/api/analyze`, {
@@ -141,6 +148,6 @@ async function handleAnalysis(url, videoId) {
 }
 
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('Tutorial Cost extension installed v1.0.4');
+  console.log('Tutorial Cost extension installed v1.0.5');
   chrome.storage.local.remove(['analysisState']);
 });

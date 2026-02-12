@@ -9,7 +9,11 @@ const settingsElements = {
   panel: null,
   btn: null,
   closeBtn: null,
-  apiKeyInput: null,
+  providerSelect: null,
+  geminiKeySection: null,
+  openrouterKeySection: null,
+  geminiKeyInput: null,
+  openrouterKeyInput: null,
   saveBtn: null,
   removeBtn: null,
   keyConfigured: null,
@@ -28,12 +32,17 @@ const authElements = {
 };
 
 let currentUser = null;
+let currentProvider = 'gemini';
 
 function initSettings() {
   settingsElements.panel = document.getElementById('settings-panel');
   settingsElements.btn = document.getElementById('settings-btn');
   settingsElements.closeBtn = document.getElementById('close-settings');
-  settingsElements.apiKeyInput = document.getElementById('api-key-input');
+  settingsElements.providerSelect = document.getElementById('provider-select');
+  settingsElements.geminiKeySection = document.getElementById('gemini-key-section');
+  settingsElements.openrouterKeySection = document.getElementById('openrouter-key-section');
+  settingsElements.geminiKeyInput = document.getElementById('gemini-key-input');
+  settingsElements.openrouterKeyInput = document.getElementById('openrouter-key-input');
   settingsElements.saveBtn = document.getElementById('save-api-key');
   settingsElements.removeBtn = document.getElementById('remove-api-key');
   settingsElements.keyConfigured = document.getElementById('key-configured');
@@ -43,7 +52,9 @@ function initSettings() {
   settingsElements.closeBtn?.addEventListener('click', closeSettings);
   settingsElements.saveBtn?.addEventListener('click', saveApiKey);
   settingsElements.removeBtn?.addEventListener('click', removeApiKey);
+  settingsElements.providerSelect?.addEventListener('change', handleProviderChange);
   
+  loadProvider();
   updateApiKeyStatus();
 }
 
@@ -59,9 +70,37 @@ function closeSettings() {
   }
 }
 
+async function loadProvider() {
+  const result = await chrome.storage.sync.get(['aiProvider']);
+  currentProvider = result.aiProvider || 'gemini';
+  if (settingsElements.providerSelect) {
+    settingsElements.providerSelect.value = currentProvider;
+  }
+  updateProviderUI();
+}
+
+function handleProviderChange() {
+  currentProvider = settingsElements.providerSelect?.value || 'gemini';
+  chrome.storage.sync.set({ aiProvider: currentProvider });
+  updateProviderUI();
+  updateApiKeyStatus();
+}
+
+function updateProviderUI() {
+  if (settingsElements.geminiKeySection) {
+    settingsElements.geminiKeySection.classList.toggle('hidden', currentProvider !== 'gemini');
+  }
+  if (settingsElements.openrouterKeySection) {
+    settingsElements.openrouterKeySection.classList.toggle('hidden', currentProvider !== 'openrouter');
+  }
+}
+
 async function updateApiKeyStatus() {
-  const result = await chrome.storage.sync.get(['geminiApiKey']);
-  const hasKey = Boolean(result.geminiApiKey);
+  const result = await chrome.storage.sync.get(['geminiApiKey', 'openrouterApiKey', 'aiProvider']);
+  const provider = result.aiProvider || 'gemini';
+  const hasKey = provider === 'gemini' 
+    ? Boolean(result.geminiApiKey) 
+    : Boolean(result.openrouterApiKey);
   
   if (settingsElements.keyConfigured) {
     settingsElements.keyConfigured.classList.toggle('hidden', !hasKey);
@@ -75,26 +114,42 @@ async function updateApiKeyStatus() {
 }
 
 async function saveApiKey() {
-  const key = settingsElements.apiKeyInput?.value?.trim();
-  
-  if (!key) {
-    alert('Please enter an API key');
-    return;
+  if (currentProvider === 'gemini') {
+    const key = settingsElements.geminiKeyInput?.value?.trim();
+    if (!key) {
+      alert('Please enter an API key');
+      return;
+    }
+    if (!key.startsWith('AIza')) {
+      alert('Invalid API key format. Gemini API keys start with "AIza"');
+      return;
+    }
+    await chrome.storage.sync.set({ geminiApiKey: key });
+    settingsElements.geminiKeyInput.value = '';
+  } else {
+    const key = settingsElements.openrouterKeyInput?.value?.trim();
+    if (!key) {
+      alert('Please enter an API key');
+      return;
+    }
+    if (!key.startsWith('sk-or-')) {
+      alert('Invalid API key format. OpenRouter API keys start with "sk-or-"');
+      return;
+    }
+    await chrome.storage.sync.set({ openrouterApiKey: key });
+    settingsElements.openrouterKeyInput.value = '';
   }
   
-  if (!key.startsWith('AIza')) {
-    alert('Invalid API key format. Gemini API keys start with "AIza"');
-    return;
-  }
-  
-  await chrome.storage.sync.set({ geminiApiKey: key });
-  settingsElements.apiKeyInput.value = '';
   updateApiKeyStatus();
   closeSettings();
 }
 
 async function removeApiKey() {
-  await chrome.storage.sync.remove(['geminiApiKey']);
+  if (currentProvider === 'gemini') {
+    await chrome.storage.sync.remove(['geminiApiKey']);
+  } else {
+    await chrome.storage.sync.remove(['openrouterApiKey']);
+  }
   updateApiKeyStatus();
 }
 
@@ -241,7 +296,6 @@ async function getVideoInfo(tab) {
 }
 
 function startAnalysis() {
-  // Send message to background worker to start analysis
   chrome.runtime.sendMessage({
     type: 'START_ANALYSIS',
     url: currentVideoUrl,
@@ -253,12 +307,10 @@ function startAnalysis() {
 }
 
 function startStatusCheck() {
-  // Clear any existing interval
   if (statusCheckInterval) {
     clearInterval(statusCheckInterval);
   }
   
-  // Check status immediately and then every 500ms
   checkStatus();
   statusCheckInterval = setInterval(checkStatus, 500);
 }
@@ -280,7 +332,6 @@ async function checkStatus() {
     
     if (!state) return;
     
-    // Only process if it's for the current video
     if (state.videoId !== currentVideoId) return;
     
     if (state.status === 'loading') {
@@ -362,7 +413,6 @@ async function init() {
   currentVideoUrl = tab.url;
   currentVideoId = videoId;
   
-  // Check if there's an existing analysis state for this video
   const state = await new Promise((resolve) => {
     chrome.runtime.sendMessage({ type: 'GET_STATUS' }, (response) => {
       resolve(response);
@@ -385,7 +435,6 @@ async function init() {
     }
   }
   
-  // No existing state, show video detected UI
   const videoInfo = await getVideoInfo(tab);
   
   document.getElementById('video-thumbnail').src = getVideoThumbnail(videoId);
@@ -397,7 +446,6 @@ async function init() {
 
 document.getElementById('analyze-btn')?.addEventListener('click', () => {
   if (currentVideoUrl) {
-    // Clear any previous state for this video before starting new analysis
     chrome.runtime.sendMessage({ type: 'CLEAR_ANALYSIS' }, () => {
       startAnalysis();
     });
@@ -413,7 +461,6 @@ document.getElementById('retry-btn')?.addEventListener('click', () => {
 });
 
 document.getElementById('new-analysis-btn')?.addEventListener('click', () => {
-  // Clear the analysis state and reinitialize
   chrome.runtime.sendMessage({ type: 'CLEAR_ANALYSIS' }, () => {
     init();
   });
@@ -430,7 +477,6 @@ document.getElementById('open-webapp')?.addEventListener('click', (e) => {
   chrome.tabs.create({ url: API_BASE_URL });
 });
 
-// Clean up interval when popup closes
 window.addEventListener('unload', () => {
   stopStatusCheck();
 });

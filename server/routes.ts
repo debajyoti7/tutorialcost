@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { extractYouTubeContent, extractPodcastContent, detectPlatform, validateUrl } from "./contentExtractor";
 import { analyzeContentForLLMExperiments, QuotaExceededError } from "./gemini";
+import { analyzeContentWithOpenRouter } from "./openrouter";
 import { insertAnalysisSchema, insertFeedbackSchema } from "@shared/schema";
 import { z } from "zod";
 import { AnalysisError, createNoExperimentsError, createInvalidUrlError, createUnsupportedPlatformError } from "./errors";
@@ -315,15 +316,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate request
       const { url } = analyzeRequestSchema.parse(req.body);
       
-      // Extract user's API key from header (optional - will fall back to server key)
-      const userApiKey = req.headers['x-gemini-api-key'] as string | undefined;
+      // Determine AI provider and extract API keys
+      const aiProvider = (req.headers['x-ai-provider'] as string) || 'gemini';
+      const geminiApiKey = req.headers['x-gemini-api-key'] as string | undefined;
+      const openrouterApiKey = req.headers['x-openrouter-api-key'] as string | undefined;
+      const userApiKey = aiProvider === 'openrouter' ? openrouterApiKey : geminiApiKey;
       
-      // If no user API key provided, require authentication to use server's key
-      if (!userApiKey) {
+      // OpenRouter always requires user's own key (no server fallback)
+      if (aiProvider === 'openrouter' && !openrouterApiKey) {
+        const processingTime = Math.round((Date.now() - startTime) / 1000);
+        return res.status(401).json({
+          type: 'api_key_required',
+          message: 'OpenRouter API key required',
+          details: 'Please add your OpenRouter API key in Settings. Get a free key at openrouter.ai/keys',
+          processingTime
+        });
+      }
+      
+      // For Gemini: if no user API key provided, require authentication to use server's key
+      if (aiProvider !== 'openrouter' && !geminiApiKey) {
         const user = req.user as any;
         const isUserAuthenticated = req.isAuthenticated?.() && user?.claims?.sub;
         
-        // Also check token expiry to prevent stale sessions
         const now = Math.floor(Date.now() / 1000);
         const isTokenValid = user?.expires_at && now <= user.expires_at;
         
@@ -332,7 +346,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(401).json({
             type: 'authentication_required',
             message: 'Sign in required',
-            details: 'Please sign in with Google to analyze videos, or add your own Gemini API key in Settings.',
+            details: 'Please sign in with Google to analyze videos, or add your own API key in Settings.',
             processingTime
           });
         }
@@ -385,7 +399,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let contentInfo;
 
       if (platform === 'YouTube') {
-        contentInfo = await extractYouTubeContent(url, userApiKey);
+        contentInfo = await extractYouTubeContent(url, aiProvider === 'openrouter' ? undefined : userApiKey);
       } else if (platform === 'Podcast') {
         contentInfo = await extractPodcastContent(url);
       } else {
@@ -401,12 +415,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`Extracted content: ${contentInfo.title} (${contentInfo.duration})`);
 
-      // Analyze content with Gemini AI
-      const aiAnalysis = await analyzeContentForLLMExperiments(
-        contentInfo.transcript, 
-        contentInfo.title,
-        userApiKey
-      );
+      // Analyze content with selected AI provider
+      let aiAnalysis;
+      if (aiProvider === 'openrouter' && openrouterApiKey) {
+        console.log('Using OpenRouter for AI analysis');
+        aiAnalysis = await analyzeContentWithOpenRouter(
+          contentInfo.transcript,
+          contentInfo.title,
+          openrouterApiKey
+        );
+      } else {
+        console.log('Using Gemini for AI analysis');
+        aiAnalysis = await analyzeContentForLLMExperiments(
+          contentInfo.transcript, 
+          contentInfo.title,
+          userApiKey
+        );
+      }
 
       // Ensure experiments and tools arrays exist
       const experiments = aiAnalysis.experiments || [];

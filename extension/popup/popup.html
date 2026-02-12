@@ -161,6 +161,13 @@
         </button>
       </div>
       <div class="settings-content">
+        <div class="input-group">
+          <label for="provider-select">AI Provider</label>
+          <select id="provider-select" class="provider-select">
+            <option value="gemini">Google Gemini</option>
+            <option value="openrouter">OpenRouter (free models)</option>
+          </select>
+        </div>
         <div id="api-key-status" class="api-key-status">
           <div id="key-configured" class="key-status configured hidden">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
@@ -177,13 +184,24 @@
             <span>No API key set</span>
           </div>
         </div>
-        <div class="input-group">
-          <label for="api-key-input">Gemini API Key</label>
-          <input type="password" id="api-key-input" placeholder="AIza...">
+        <div id="gemini-key-section" class="input-group">
+          <label for="gemini-key-input">Gemini API Key</label>
+          <input type="password" id="gemini-key-input" placeholder="AIza...">
+          <p class="settings-help">
+            Get your free key from 
+            <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a>
+          </p>
+        </div>
+        <div id="openrouter-key-section" class="input-group hidden">
+          <label for="openrouter-key-input">OpenRouter API Key</label>
+          <input type="password" id="openrouter-key-input" placeholder="sk-or-...">
+          <p class="settings-help">
+            Free models available. Get your key from 
+            <a href="https://openrouter.ai/keys" target="_blank">OpenRouter</a>
+          </p>
         </div>
         <p class="settings-help">
-          Your key is sent securely to our server for Gemini calls only. We don't store or log it. Get your free key from 
-          <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a>
+          Your key is stored locally and sent securely only during analysis. We don't store or log it.
         </p>
         <div class="settings-actions">
           <button id="save-api-key" class="btn btn-primary btn-sm">Save Key</button>
