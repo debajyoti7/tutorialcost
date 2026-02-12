@@ -18,9 +18,16 @@ The UI design system is built on Tailwind CSS with custom CSS variables for them
 ### Backend Architecture
 The server runs on Express.js with TypeScript, following a REST API pattern. The main analysis endpoint (`/api/analyze`) handles the complete workflow from URL input to final results. Content extraction is handled by specialized modules that support YouTube transcripts and podcast content parsing.
 
-The AI analysis layer integrates with Google's Gemini API for intelligent content processing. The system analyzes transcripts to identify LLM experiments, extract tool mentions, estimate implementation costs, and categorize complexity levels. Enhanced in October 2025 with context-aware pricing tier selection that respects AI-suggested tiers based on experiment complexity (learning vs production use). The system now tracks multiple pricing types (free, fixed, usage-based, per-token) and provides transparent tier recommendations with full pricing breakdowns.
+The AI analysis layer supports multiple providers: Google's Gemini API (primary, via @google/genai SDK) and OpenRouter (alternative, via REST API at openrouter.ai/api/v1). Provider selection is user-configurable in Settings. The system analyzes transcripts to identify LLM experiments, extract tool mentions, estimate implementation costs, and categorize complexity levels. Enhanced in October 2025 with context-aware pricing tier selection that respects AI-suggested tiers based on experiment complexity (learning vs production use). The system now tracks multiple pricing types (free, fixed, usage-based, per-token) and provides transparent tier recommendations with full pricing breakdowns.
 
-Intelligent pricing tier selection uses a flag-based matching system that prevents fallback logic from overriding valid AI recommendations. When Gemini suggests a specific tier (including free/self-hosted options), the system honors that recommendation rather than defaulting to paid tiers based on complexity alone.
+**Multi-Provider Architecture (added February 2026):**
+- Provider selection via `X-AI-Provider` header (gemini or openrouter)
+- OpenRouter uses free models (google/gemini-2.5-flash-preview-05-20:free) and always requires BYOK
+- OpenRouter cannot transcribe video directly; relies on YouTube captions only
+- Gemini supports both YouTube captions and AI video transcription fallback
+- Server routes in `server/routes.ts` dispatch to `server/gemini.ts` or `server/openrouter.ts`
+
+Intelligent pricing tier selection uses a flag-based matching system that prevents fallback logic from overriding valid AI recommendations. When the AI suggests a specific tier (including free/self-hosted options), the system honors that recommendation rather than defaulting to paid tiers based on complexity alone.
 
 ### Data Storage Solutions
 The application uses Drizzle ORM with PostgreSQL as the primary database. The schema supports storing analysis results, content metadata, and a comprehensive tool database for pricing reference. Key tables include `analyses` for storing processed results and `toolDatabase` for maintaining tool pricing and feature information.
@@ -36,8 +43,8 @@ The application uses Replit Auth with OpenID Connect for user authentication, su
 - Anonymous users without an API key are prompted to sign in or add their own key
 
 **Bring Your Own Key (BYOK):**
-- Users can configure their own Gemini API key in the Settings dialog (web) or settings panel (Chrome extension)
-- API keys are stored locally (localStorage for web, chrome.storage.sync for extension)
+- Users can configure their own Gemini API key or OpenRouter API key in the Settings dialog (web) or settings panel (Chrome extension)
+- Provider selection (Gemini/OpenRouter) and API keys are stored locally (localStorage for web, chrome.storage.sync for extension)
 - Keys are sent to the server only during API calls and are never persisted server-side
 
 This tiered access model allows free public usage while protecting the server's API quota for verified users.
@@ -50,6 +57,7 @@ Error handling includes validation for unsupported URLs, transcript availability
 ## External Dependencies
 
 - **Google Gemini AI**: Primary AI service for content analysis and experiment identification using the @google/genai SDK
+- **OpenRouter API**: Alternative AI provider offering free model access via REST API (openrouter.ai/api/v1)
 - **YouTube Transcript API**: Content extraction from YouTube videos via youtube-transcript library
 - **Neon Database**: PostgreSQL hosting service accessed through @neondatabase/serverless
 - **Radix UI**: Comprehensive component library providing accessible UI primitives (@radix-ui/react-*)
