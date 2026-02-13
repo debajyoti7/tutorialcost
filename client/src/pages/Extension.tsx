@@ -1,9 +1,18 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import Header from "@/components/Header";
 import ThemeToggle from "@/components/ThemeToggle";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { 
   Chrome, 
   Download, 
@@ -11,7 +20,9 @@ import {
   Youtube, 
   MousePointer, 
   BarChart3,
-  ExternalLink
+  ExternalLink,
+  Lock,
+  Loader2
 } from "lucide-react";
 
 const CHROME_STORE_URL = "https://chromewebstore.google.com/detail/lfgjflkhemomgiojmkiicijlmheocmng";
@@ -40,12 +51,55 @@ const features = [
 ];
 
 export default function Extension() {
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isDownloading, setIsDownloading] = useState(false);
+
   const handleInstall = () => {
     window.open(CHROME_STORE_URL, '_blank');
   };
 
   const handleDevDownload = () => {
-    window.location.href = '/api/extension/download';
+    setShowPasswordDialog(true);
+    setPassword("");
+    setError("");
+  };
+
+  const handlePasswordSubmit = async () => {
+    if (!password.trim()) {
+      setError("Please enter the password");
+      return;
+    }
+    setIsDownloading(true);
+    setError("");
+    try {
+      const response = await fetch('/api/extension/download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: password.trim() }),
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        setError(data.error || "Download failed");
+        setIsDownloading(false);
+        return;
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'content-analyzer-extension.zip';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      setShowPasswordDialog(false);
+    } catch {
+      setError("Download failed. Please try again.");
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   return (
@@ -189,6 +243,51 @@ export default function Extension() {
           </div>
         </div>
       </footer>
+
+      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lock className="h-5 w-5" />
+              Developer Download
+            </DialogTitle>
+            <DialogDescription>
+              Enter the password to download the unpacked extension.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => { setPassword(e.target.value); setError(""); }}
+              onKeyDown={(e) => { if (e.key === 'Enter') handlePasswordSubmit(); }}
+              autoFocus
+            />
+            {error && (
+              <p className="text-sm text-destructive">{error}</p>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowPasswordDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handlePasswordSubmit} disabled={isDownloading}>
+                {isDownloading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Downloading...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4" />
+                    Download
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

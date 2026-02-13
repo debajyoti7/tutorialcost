@@ -937,18 +937,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // GET /api/extension/download - Download Chrome extension as zip
-  app.get("/api/extension/download", async (req, res) => {
+  app.post("/api/extension/download", async (req, res) => {
     try {
+      const { password } = req.body;
+      const expectedPassword = process.env.EXTENSION_DOWNLOAD_PASSWORD;
+
+      if (!expectedPassword) {
+        return res.status(500).json({ error: 'Download not configured' });
+      }
+
+      if (!password || password !== expectedPassword) {
+        return res.status(401).json({ error: 'Incorrect password' });
+      }
+
       const extensionDir = path.resolve(process.cwd(), 'extension');
       const zipPath = path.resolve(process.cwd(), 'content-analyzer-extension.zip');
-      
-      // Check if extension directory exists
+
       if (!fs.existsSync(extensionDir)) {
         return res.status(404).json({ error: 'Extension not found' });
       }
-      
-      // Create zip file (excluding the generator script)
+
       try {
         execSync(`cd ${extensionDir} && zip -r ${zipPath} manifest.json popup icons scripts -x "*.cjs"`, {
           stdio: 'pipe'
@@ -957,25 +965,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('Failed to create zip:', zipError);
         return res.status(500).json({ error: 'Failed to package extension' });
       }
-      
-      // Check if zip was created
+
       if (!fs.existsSync(zipPath)) {
         return res.status(500).json({ error: 'Failed to create extension package' });
       }
-      
-      // Send the zip file
+
       res.setHeader('Content-Type', 'application/zip');
       res.setHeader('Content-Disposition', 'attachment; filename="content-analyzer-extension.zip"');
-      
+
       const fileStream = fs.createReadStream(zipPath);
       fileStream.pipe(res);
-      
-      // Clean up zip file after sending
+
       fileStream.on('end', () => {
         try {
           fs.unlinkSync(zipPath);
         } catch (e) {
-          // Ignore cleanup errors
         }
       });
     } catch (error) {
