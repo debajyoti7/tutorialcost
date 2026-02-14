@@ -64,8 +64,8 @@ const errorConfigs = {
     icon: Wifi,
     title: 'Connection Problem',
     description: 'Unable to connect to the analysis service.',
-    color: 'text-purple-600 dark:text-purple-400',
-    bgColor: 'bg-purple-50 dark:bg-purple-950/30',
+    color: 'text-indigo-600 dark:text-indigo-400',
+    bgColor: 'bg-indigo-50 dark:bg-indigo-950/30',
     suggestions: [
       'Check your internet connection',
       'Try refreshing the page',

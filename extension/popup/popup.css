@@ -1,15 +1,15 @@
 :root {
-  --primary: #8b5cf6;
+  --primary: #6366f1;
   --primary-foreground: #ffffff;
   --emerald: #10b981;
   --emerald-foreground: #ffffff;
-  --background: #0f0a1a;
-  --foreground: #f8fafc;
-  --card: #1a1225;
-  --card-foreground: #f8fafc;
-  --muted: #27203a;
-  --muted-foreground: #94a3b8;
-  --border: #2d2640;
+  --background: #F8FAFC;
+  --foreground: #0F172A;
+  --card: #FFFFFF;
+  --card-foreground: #0F172A;
+  --muted: #e2e8f0;
+  --muted-foreground: #475569;
+  --border: #e2e8f0;
   --destructive: #ef4444;
   --amber: #f59e0b;
   --radius: 8px;
@@ -39,7 +39,7 @@ body {
 .header {
   padding: 16px;
   border-bottom: 1px solid var(--border);
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(16, 185, 129, 0.05));
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(16, 185, 129, 0.04));
 }
 
 .logo {
@@ -183,7 +183,7 @@ body {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary), #7c3aed);
+  background: linear-gradient(135deg, var(--primary), #4f46e5);
   color: var(--primary-foreground);
 }
 
@@ -320,10 +320,10 @@ body {
   align-items: center;
   padding: 4px 10px;
   font-size: 12px;
-  background: rgba(139, 92, 246, 0.15);
+  background: rgba(99, 102, 241, 0.1);
   color: var(--primary);
   border-radius: 9999px;
-  border: 1px solid rgba(139, 92, 246, 0.3);
+  border: 1px solid rgba(99, 102, 241, 0.2);
 }
 
 .actions {
