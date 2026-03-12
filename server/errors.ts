@@ -7,6 +7,7 @@ export type ErrorType =
   | 'empty-content'
   | 'unsupported-platform'
   | 'gemini-error'
+  | 'rate-limited'
   | 'generic';
 
 export class AnalysisError extends Error {

@@ -14,6 +14,7 @@ export type ErrorType =
   | 'unsupported-platform'
   | 'gemini-error'
   | 'quota-exceeded'
+  | 'rate-limited'
   | 'generic';
 
 interface ErrorStateProps {
@@ -130,6 +131,18 @@ const errorConfigs = {
       'Wait a minute and try again',
       'The service is experiencing high demand',
       'Consider adding your own API key in Settings for unlimited access'
+    ]
+  },
+  'rate-limited': {
+    icon: AlertCircle,
+    title: 'Too Many Requests',
+    description: 'You have submitted too many analysis requests. Please wait a moment before trying again.',
+    color: 'text-yellow-600 dark:text-yellow-400',
+    bgColor: 'bg-yellow-50 dark:bg-yellow-950/30',
+    suggestions: [
+      'Wait about a minute before submitting another request',
+      'Each user can submit up to 5 analyses per minute',
+      'Consider adding your own API key in Settings for higher limits'
     ]
   },
   'generic': {

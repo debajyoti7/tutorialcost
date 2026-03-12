@@ -11,8 +11,27 @@ import { createHmac } from "crypto";
 import path from "path";
 import fs from "fs";
 import { execSync } from "child_process";
-import "express-session"; // Import for type augmentation
+import "express-session";
 import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
+import rateLimit from "express-rate-limit";
+
+const ANALYZE_RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const ANALYZE_RATE_LIMIT_MAX_REQUESTS = 5;
+
+const analyzeRateLimiter = rateLimit({
+  windowMs: ANALYZE_RATE_LIMIT_WINDOW_MS,
+  max: ANALYZE_RATE_LIMIT_MAX_REQUESTS,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (_req, res) => {
+    res.status(429).json({
+      type: 'rate-limited',
+      message: 'Too many analysis requests. Please wait a moment before trying again.',
+      details: `You can submit up to ${ANALYZE_RATE_LIMIT_MAX_REQUESTS} analysis requests per minute. Please wait and try again shortly.`,
+      processingTime: 0,
+    });
+  },
+});
 
 // Hash session ID for privacy (HMAC-SHA256)
 function hashSessionId(sessionId: string): string {
@@ -309,7 +328,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST /api/analyze - Main content analysis endpoint
-  app.post("/api/analyze", async (req, res) => {
+  app.post("/api/analyze", analyzeRateLimiter, async (req, res) => {
     const startTime = Date.now();
     
     try {
