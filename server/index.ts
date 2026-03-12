@@ -7,6 +7,29 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 app.use((req, res, next) => {
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  const isDev = process.env.NODE_ENV === 'development';
+  const scriptSrc = isDev ? "'self' 'unsafe-inline' 'unsafe-eval'" : "'self'";
+  const connectSrc = isDev
+    ? "'self' https://generativelanguage.googleapis.com https://openrouter.ai ws:"
+    : "'self' https://generativelanguage.googleapis.com https://openrouter.ai";
+  res.setHeader(
+    'Content-Security-Policy',
+    `default-src 'self'; script-src ${scriptSrc}; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; font-src 'self'; connect-src ${connectSrc}; frame-ancestors 'none';`
+  );
+
+  if (req.path.startsWith('/api/auth') || req.path.startsWith('/api/analyze') || req.path.startsWith('/api/analyses')) {
+    res.setHeader('Cache-Control', 'no-store');
+  }
+
+  next();
+});
+
+const SENSITIVE_HEADERS = ['x-gemini-api-key', 'x-openrouter-api-key'];
+
+app.use((req, res, next) => {
   const origin = req.headers.origin;
   
   if (origin && (
@@ -17,7 +40,7 @@ app.use((req, res, next) => {
   )) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-AI-Provider, X-Gemini-Api-Key, X-OpenRouter-Api-Key');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
   }
   
@@ -25,6 +48,18 @@ app.use((req, res, next) => {
     return res.sendStatus(200);
   }
   
+  next();
+});
+
+app.use('/api', (req, res, next) => {
+  if (['POST', 'PATCH', 'PUT'].includes(req.method)) {
+    if (req.path === '/extension/download') return next();
+
+    const contentType = req.headers['content-type'];
+    if (!contentType || !contentType.includes('application/json')) {
+      return res.status(415).json({ message: 'Content-Type must be application/json' });
+    }
+  }
   next();
 });
 
@@ -44,7 +79,13 @@ app.use((req, res, next) => {
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+        const safeBody = { ...capturedJsonResponse };
+        for (const key of SENSITIVE_HEADERS) {
+          if (key in safeBody) {
+            safeBody[key] = '[REDACTED]';
+          }
+        }
+        logLine += ` :: ${JSON.stringify(safeBody)}`;
       }
 
       if (logLine.length > 80) {
@@ -66,7 +107,7 @@ app.use((req, res, next) => {
     const message = err.message || "Internal Server Error";
 
     res.status(status).json({ message });
-    throw err;
+    console.error(`[ERROR] ${status}: ${message}`);
   });
 
   // importantly only setup vite in development and after

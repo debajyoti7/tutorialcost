@@ -212,6 +212,7 @@ export default function SettingsDialog() {
                   placeholder={config.placeholder}
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
+                  autoComplete="off"
                   data-testid="input-api-key"
                 />
               </div>

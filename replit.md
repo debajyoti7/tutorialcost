@@ -34,6 +34,22 @@ The application uses Drizzle ORM with PostgreSQL as the primary database. The sc
 
 Data is structured to support caching of analysis results, preventing duplicate processing of the same content URLs. The tool database serves as a reference system with multi-tier pricing structures for each tool. Each tool can have multiple pricing tiers (e.g., Free, Starter, Pro, Enterprise) with different pricing types (free, fixed monthly, usage-based ranges, per-token costs), enabling accurate cost estimates across different use cases and scales.
 
+### Security Hardening (added March 2026)
+The server sets the following HTTP security headers on all responses via middleware in `server/index.ts`:
+- `X-Frame-Options: DENY` — prevents clickjacking
+- `Referrer-Policy: strict-origin-when-cross-origin` — stops URL leakage
+- `X-Content-Type-Options: nosniff` — prevents MIME-type sniffing
+- `Content-Security-Policy` — restricts resource loading; stricter in production (`'self'` for scripts), relaxed in development for Vite HMR (`'unsafe-inline' 'unsafe-eval'` + `ws:`)
+- `Cache-Control: no-store` on `/api/auth`, `/api/analyze`, and `/api/analyses` routes
+
+Additional protections:
+- POST/PATCH/PUT to `/api/*` requires `Content-Type: application/json` (returns 415 otherwise); exception: `/api/extension/download`
+- Session IDs are regenerated after OIDC login callback to prevent session fixation
+- Request logging middleware redacts `x-gemini-api-key` and `x-openrouter-api-key` header values from log output
+- Global error handler logs errors without re-throwing (prevents stack trace noise)
+- API key input fields have `autocomplete="off"` in both the web Settings dialog and the Chrome extension popup
+- CORS `Access-Control-Allow-Headers` explicitly lists custom headers (`X-AI-Provider`, `X-Gemini-Api-Key`, `X-OpenRouter-Api-Key`)
+
 ### Authentication and Authorization
 The application uses Replit Auth with OpenID Connect for user authentication, supporting Google Sign-In (plus GitHub, Apple, and email/password). Session management uses PostgreSQL storage with connect-pg-simple.
 
