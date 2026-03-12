@@ -40,7 +40,7 @@ The server sets the following HTTP security headers on all responses via middlew
 - `Referrer-Policy: strict-origin-when-cross-origin` — stops URL leakage
 - `X-Content-Type-Options: nosniff` — prevents MIME-type sniffing
 - `Content-Security-Policy` — restricts resource loading; stricter in production (`'self'` for scripts), relaxed in development for Vite HMR (`'unsafe-inline' 'unsafe-eval'` + `ws:`)
-- `Cache-Control: no-store` on `/api/auth`, `/api/analyze`, and `/api/analyses` routes
+- `Cache-Control: no-store` on all `/api/*` routes
 
 Additional protections:
 - POST/PATCH/PUT to `/api/*` requires `Content-Type: application/json` (returns 415 otherwise); exception: `/api/extension/download`

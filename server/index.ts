@@ -20,7 +20,7 @@ app.use((req, res, next) => {
     `default-src 'self'; script-src ${scriptSrc}; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; font-src 'self'; connect-src ${connectSrc}; frame-ancestors 'none';`
   );
 
-  if (req.path.startsWith('/api/auth') || req.path.startsWith('/api/analyze') || req.path.startsWith('/api/analyses')) {
+  if (req.path.startsWith('/api')) {
     res.setHeader('Cache-Control', 'no-store');
   }
 
