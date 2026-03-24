@@ -1,4 +1,4 @@
-import { AnalysisResult, QuotaExceededError } from "./gemini";
+import { AnalysisResult, QuotaExceededError, LearningRef } from "./gemini";
 
 export { QuotaExceededError };
 export type { AnalysisResult };
@@ -89,13 +89,15 @@ export async function analyzeContentWithOpenRouter(
   transcript: string,
   title: string,
   userApiKey: string,
-): Promise<AnalysisResult> {
+  learnings?: LearningRef[],
+): Promise<AnalysisResult & { learningIdsUsed: string[] }> {
   try {
     if (!userApiKey) {
       throw new Error("No OpenRouter API key provided. Please configure your API key.");
     }
 
-    const systemPrompt = `You are an expert AI researcher analyzing content to identify LLM experiments and tools mentioned.
+    const learningIdsUsed: string[] = [];
+    let systemPrompt = `You are an expert AI researcher analyzing content to identify LLM experiments and tools mentioned.
 
 ═══ CRITICAL: YOUR ROLE ═══
 ✓ YOU IDENTIFY tools and experiments (qualitative analysis)
@@ -167,6 +169,14 @@ Common tier patterns:
 
 Return valid JSON matching the schema.`;
 
+    if (learnings && learnings.length > 0) {
+      systemPrompt += `\n\n═══ LEARNED CORRECTIONS FROM USER FEEDBACK ═══\n`;
+      for (const l of learnings) {
+        systemPrompt += `• ${l.insight}\n`;
+        learningIdsUsed.push(l.id);
+      }
+    }
+
     const userPrompt = `Content Title: ${title}
 
 Transcript:
@@ -193,7 +203,7 @@ Analyze this content and identify LLM experiments and tools as specified. Return
 
     const cleanedJson = rawJson.replace(/^```json\s*\n?/, '').replace(/\n?```\s*$/, '').trim();
     const data: AnalysisResult = JSON.parse(cleanedJson);
-    return data;
+    return { ...data, learningIdsUsed };
   } catch (error) {
     console.error("OpenRouter analysis failed:", error);
 

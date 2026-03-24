@@ -77,6 +77,8 @@ export const analyses = pgTable("analyses", {
   tags: jsonb("tags").$type<string[]>().default(sql`'[]'::jsonb`),
   isFavorite: boolean("is_favorite").default(false).notNull(),
   notes: text("notes"),
+  // Learnings used during this analysis run
+  learningsUsed: jsonb("learnings_used").$type<string[]>().default(sql`'[]'::jsonb`),
 });
 
 // Tool database for reference pricing and information
@@ -144,3 +146,22 @@ export const insertFeedbackSchema = createInsertSchema(feedback).omit({
 
 export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;
 export type Feedback = typeof feedback.$inferSelect;
+
+// Learnings table for AI-distilled corrections from negative feedback
+export const learnings = pgTable("learnings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  feedbackId: varchar("feedback_id").notNull().references(() => feedback.id, { onDelete: 'cascade' }),
+  analysisId: varchar("analysis_id").notNull().references(() => analyses.id, { onDelete: 'cascade' }),
+  category: text("category").notNull(),
+  insight: text("insight").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertLearningSchema = createInsertSchema(learnings).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertLearning = z.infer<typeof insertLearningSchema>;
+export type Learning = typeof learnings.$inferSelect;

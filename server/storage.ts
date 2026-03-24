@@ -1,9 +1,9 @@
-import { type User, type InsertUser, type Analysis, type InsertAnalysis, type Tool, type InsertTool, type Feedback, type InsertFeedback } from "@shared/schema";
+import { type User, type InsertUser, type Analysis, type InsertAnalysis, type Tool, type InsertTool, type Feedback, type InsertFeedback, type Learning, type InsertLearning } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { analyses, toolDatabase, users, feedback } from "@shared/schema";
-import { eq, sql } from "drizzle-orm";
+import { analyses, toolDatabase, users, feedback, learnings } from "@shared/schema";
+import { eq, sql, desc } from "drizzle-orm";
 
 // Storage interface for the content analyzer
 export interface IStorage {
@@ -36,6 +36,10 @@ export interface IStorage {
   
   // Feedback methods
   createFeedback(feedbackData: InsertFeedback): Promise<Feedback>;
+  
+  // Learning methods
+  createLearning(learningData: InsertLearning): Promise<Learning>;
+  getActiveLearnings(limit: number): Promise<Learning[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -43,12 +47,14 @@ export class MemStorage implements IStorage {
   private analyses: Map<string, Analysis>;
   private tools: Map<string, Tool>;
   private feedbacks: Map<string, Feedback>;
+  private learningsMap: Map<string, Learning>;
 
   constructor() {
     this.users = new Map();
     this.analyses = new Map();
     this.tools = new Map();
     this.feedbacks = new Map();
+    this.learningsMap = new Map();
     
     // Initialize with some common tools
     this.initializeToolDatabase();
@@ -478,6 +484,7 @@ export class MemStorage implements IStorage {
       tags: (insertAnalysis.tags as string[]) || [],
       isFavorite: insertAnalysis.isFavorite || false,
       notes: insertAnalysis.notes || null,
+      learningsUsed: ((insertAnalysis.learningsUsed as string[]) || []) as string[] | null,
       shareId: null,
       viewCount: 0,
       lastViewedAt: null,
@@ -613,6 +620,24 @@ export class MemStorage implements IStorage {
     };
     this.feedbacks.set(newFeedback.id, newFeedback);
     return newFeedback;
+  }
+
+  async createLearning(learningData: InsertLearning): Promise<Learning> {
+    const newLearning: Learning = {
+      id: randomUUID(),
+      ...learningData,
+      isActive: learningData.isActive ?? true,
+      createdAt: new Date()
+    };
+    this.learningsMap.set(newLearning.id, newLearning);
+    return newLearning;
+  }
+
+  async getActiveLearnings(limit: number): Promise<Learning[]> {
+    return Array.from(this.learningsMap.values())
+      .filter(l => l.isActive)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, limit);
   }
 }
 
@@ -1035,6 +1060,23 @@ export class DbStorage implements IStorage {
       .values(feedbackData)
       .returning();
     return result[0];
+  }
+
+  async createLearning(learningData: InsertLearning): Promise<Learning> {
+    const result = await this.db
+      .insert(learnings)
+      .values(learningData)
+      .returning();
+    return result[0];
+  }
+
+  async getActiveLearnings(limit: number): Promise<Learning[]> {
+    return await this.db
+      .select()
+      .from(learnings)
+      .where(eq(learnings.isActive, true))
+      .orderBy(desc(learnings.createdAt))
+      .limit(limit);
   }
 }
 

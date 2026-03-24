@@ -5,6 +5,7 @@ import { extractYouTubeContent, extractPodcastContent, detectPlatform, validateU
 import { analyzeContentForLLMExperiments, QuotaExceededError } from "./gemini";
 import { analyzeContentWithOpenRouter } from "./openrouter";
 import { insertAnalysisSchema, insertFeedbackSchema } from "@shared/schema";
+import { generateAndStoreLearning } from "./learnings";
 import { z } from "zod";
 import { AnalysisError, createNoExperimentsError, createInvalidUrlError, createUnsupportedPlatformError } from "./errors";
 import { createHmac } from "crypto";
@@ -434,6 +435,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`Extracted content: ${contentInfo.title} (${contentInfo.duration})`);
 
+      // Fetch active learnings to inject into the AI prompt
+      const activeLearnings = await storage.getActiveLearnings(10);
+      const learningRefs = activeLearnings.map(l => ({ id: l.id, insight: l.insight }));
+      if (learningRefs.length > 0) {
+        console.log(`Injecting ${learningRefs.length} learnings into AI prompt`);
+      }
+
       // Analyze content with selected AI provider
       let aiAnalysis;
       if (aiProvider === 'openrouter' && openrouterApiKey) {
@@ -441,14 +449,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         aiAnalysis = await analyzeContentWithOpenRouter(
           contentInfo.transcript,
           contentInfo.title,
-          openrouterApiKey
+          openrouterApiKey,
+          learningRefs
         );
       } else {
         console.log('Using Gemini for AI analysis');
         aiAnalysis = await analyzeContentForLLMExperiments(
           contentInfo.transcript, 
           contentInfo.title,
-          userApiKey
+          userApiKey,
+          learningRefs
         );
       }
 
@@ -671,7 +681,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         experiments: experimentsWithCosts,
         tools: detailedTools,
         summary: enhancedSummary,
-        processingTime
+        processingTime,
+        learningsUsed: aiAnalysis.learningIdsUsed || []
       };
 
       const savedAnalysis = await storage.createAnalysis(analysisData);
@@ -942,6 +953,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       const newFeedback = await storage.createFeedback(feedbackData);
+
+      // Fire-and-forget learning generation for negative feedback with a comment
+      if (validatedData.sentiment === 'negative' && validatedData.comment && validatedData.comment.trim().length > 0) {
+        const serverGeminiApiKey = process.env.GEMINI_API_KEY || "";
+        storage.getAnalysis(validatedData.analysisId).then(analysisRecord => {
+          if (analysisRecord && serverGeminiApiKey) {
+            generateAndStoreLearning(newFeedback, analysisRecord, serverGeminiApiKey);
+          }
+        }).catch(err => {
+          console.error("[learnings] Failed to fetch analysis for learning generation:", err);
+        });
+      }
       
       res.status(201).json({
         id: newFeedback.id,

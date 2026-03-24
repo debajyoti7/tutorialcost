@@ -109,14 +109,20 @@ export interface AnalysisResult {
   };
 }
 
+export interface LearningRef {
+  id: string;
+  insight: string;
+}
+
 export async function analyzeContentForLLMExperiments(
   transcript: string,
   title: string,
   userApiKey?: string,
-): Promise<AnalysisResult> {
+  learnings?: LearningRef[],
+): Promise<AnalysisResult & { learningIdsUsed: string[] }> {
   try {
     const client = getClient(userApiKey);
-    const systemPrompt = `You are an expert AI researcher analyzing content to identify LLM experiments and tools mentioned.
+    let systemPrompt = `You are an expert AI researcher analyzing content to identify LLM experiments and tools mentioned.
 
 ═══ CRITICAL: YOUR ROLE ═══
 ✓ YOU IDENTIFY tools and experiments (qualitative analysis)
@@ -187,6 +193,15 @@ Common tier patterns:
 • deploymentType must match how the tool is actually used
 
 Return valid JSON matching the schema.`;
+
+    const learningIdsUsed: string[] = [];
+    if (learnings && learnings.length > 0) {
+      systemPrompt += `\n\n═══ LEARNED CORRECTIONS FROM USER FEEDBACK ═══\n`;
+      for (const l of learnings) {
+        systemPrompt += `• ${l.insight}\n`;
+        learningIdsUsed.push(l.id);
+      }
+    }
 
     const prompt = `Content Title: ${title}
 
@@ -282,7 +297,7 @@ Analyze this content and identify LLM experiments and tools as specified.`;
 
     if (rawJson) {
       const data: AnalysisResult = JSON.parse(rawJson);
-      return data;
+      return { ...data, learningIdsUsed };
     } else {
       throw new Error("Empty response from Gemini");
     }
