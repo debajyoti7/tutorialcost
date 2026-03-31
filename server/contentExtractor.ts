@@ -1,5 +1,7 @@
 import fetch from 'node-fetch';
 import { google } from 'googleapis';
+import { spawn } from 'child_process';
+import path from 'path';
 import { 
   createTranscriptDisabledError, 
   createInvalidUrlError, 
@@ -65,10 +67,10 @@ export async function extractYouTubeContent(url: string, userApiKey?: string): P
     let transcriptSource: 'youtube' | 'ai-generated' | 'description-only' = 'youtube';
     
     try {
-      transcriptItems = await fetchYouTubeTranscriptDirect(videoId);
+      transcriptItems = await fetchTranscriptViaPython(videoId);
       hasTranscript = transcriptItems && transcriptItems.length > 0;
       if (hasTranscript) {
-        console.log('Successfully extracted transcript with direct fetch');
+        console.log('Successfully extracted transcript via Python youtube-transcript-api');
         transcriptSource = 'youtube';
       }
     } catch (transcriptError) {
@@ -372,6 +374,75 @@ interface TranscriptItem {
   text: string;
   offset: number;
   duration: number;
+}
+
+interface PythonTranscriptSnippet {
+  text: string;
+  start: number;
+  duration: number;
+}
+
+interface PythonTranscriptResult {
+  success: boolean;
+  snippets?: PythonTranscriptSnippet[];
+  language?: string;
+  is_generated?: boolean;
+  error?: string;
+}
+
+async function fetchTranscriptViaPython(videoId: string): Promise<TranscriptItem[]> {
+  const scriptPath = path.resolve('scripts/fetch_transcript.py');
+
+  return new Promise((resolve, reject) => {
+    const proc = spawn('python3', [scriptPath, videoId]);
+    let stdout = '';
+    let stderr = '';
+
+    proc.stdout.on('data', (chunk: Buffer) => {
+      stdout += chunk.toString();
+    });
+
+    proc.stderr.on('data', (chunk: Buffer) => {
+      stderr += chunk.toString();
+    });
+
+    proc.on('error', (err: Error) => {
+      reject(new Error(`Failed to spawn python3: ${err.message}`));
+    });
+
+    proc.on('close', (code: number | null) => {
+      if (stderr) {
+        console.log('Python transcript script stderr:', stderr);
+      }
+
+      if (code !== 0 && !stdout.trim()) {
+        reject(new Error(`Python transcript script exited with code ${code}${stderr ? `: ${stderr.trim()}` : ''}`));
+        return;
+      }
+
+      let parsed: PythonTranscriptResult;
+      try {
+        parsed = JSON.parse(stdout.trim()) as PythonTranscriptResult;
+      } catch {
+        reject(new Error(`Failed to parse Python script output (exit ${code}): ${stdout}`));
+        return;
+      }
+
+      if (!parsed.success) {
+        reject(new Error(parsed.error || 'Python transcript fetch failed'));
+        return;
+      }
+
+      const snippets = parsed.snippets ?? [];
+      const items: TranscriptItem[] = snippets.map((s) => ({
+        text: s.text,
+        offset: s.start,
+        duration: s.duration,
+      }));
+
+      resolve(items);
+    });
+  });
 }
 
 async function fetchYouTubeTranscriptDirect(videoId: string): Promise<TranscriptItem[]> {
