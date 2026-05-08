@@ -5,19 +5,9 @@ import { Separator } from "@/components/ui/separator";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { FeedbackButton } from "@/components/FeedbackButton";
-import { 
-  ExternalLink, 
-  DollarSign, 
-  Zap, 
-  Clock, 
-  Star,
-  TrendingUp,
-  Download,
-  Share2,
-  FileText,
-  FileSpreadsheet,
-  Copy,
-  AlertCircle
+import {
+  ExternalLink, DollarSign, Zap, Clock, Star, TrendingUp, Download, Share2,
+  FileText, FileSpreadsheet, AlertCircle,
 } from "lucide-react";
 
 export interface Tool {
@@ -101,34 +91,36 @@ interface AnalysisResultsProps {
   analysisId?: string;
 }
 
+const BADGE_PILL = { borderRadius: "100px", fontSize: "0.68rem", textTransform: "uppercase" as const, letterSpacing: "0.04em" };
+
 export default function AnalysisResults({ data, onNewAnalysis, hideShareButton = false, analysisId }: AnalysisResultsProps) {
   const { toast } = useToast();
-  
-  const getDifficultyColor = (difficulty: string) => {
+
+  const getDifficultyStyle = (difficulty: string) => {
     switch (difficulty) {
-      case 'Beginner': return 'bg-emerald text-emerald-foreground';
-      case 'Intermediate': return 'bg-amber text-amber-foreground';
-      case 'Advanced': return 'bg-destructive text-destructive-foreground';
-      default: return 'bg-secondary text-secondary-foreground';
+      case 'Beginner': return { color: "hsl(var(--sage))", background: "hsl(var(--sage-light))" };
+      case 'Intermediate': return { color: "hsl(var(--amber))", background: "hsl(var(--amber-light))" };
+      case 'Advanced': return { color: "hsl(var(--destructive))", background: "hsl(var(--destructive) / 0.1)" };
+      default: return {};
     }
   };
 
-  const getComplexityColor = (complexity: string) => {
+  const getComplexityStyle = (complexity: string) => {
     switch (complexity) {
-      case 'Low': return 'bg-emerald text-emerald-foreground';
-      case 'Medium': return 'bg-amber text-amber-foreground';
-      case 'High': return 'bg-destructive text-destructive-foreground';
-      default: return 'bg-secondary text-secondary-foreground';
+      case 'Low': return { color: "hsl(var(--sage))", background: "hsl(var(--sage-light))" };
+      case 'Medium': return { color: "hsl(var(--amber))", background: "hsl(var(--amber-light))" };
+      case 'High': return { color: "hsl(var(--destructive))", background: "hsl(var(--destructive) / 0.1)" };
+      default: return {};
     }
   };
 
-  const getCostClassificationColor = (classification?: string) => {
+  const getCostStyle = (classification?: string) => {
     switch (classification) {
-      case 'Free': return 'bg-emerald text-emerald-foreground';
-      case 'Low': return 'bg-primary text-primary-foreground';
-      case 'Medium': return 'bg-amber text-amber-foreground';
-      case 'High': return 'bg-destructive text-destructive-foreground';
-      default: return 'bg-secondary text-secondary-foreground';
+      case 'Free': return { color: "hsl(var(--sage))", background: "hsl(var(--sage-light))" };
+      case 'Low': return { color: "hsl(var(--primary))", background: "hsl(var(--primary) / 0.1)" };
+      case 'Medium': return { color: "hsl(var(--amber))", background: "hsl(var(--amber-light))" };
+      case 'High': return { color: "hsl(var(--destructive))", background: "hsl(var(--destructive) / 0.1)" };
+      default: return {};
     }
   };
 
@@ -146,38 +138,23 @@ export default function AnalysisResults({ data, onNewAnalysis, hideShareButton =
           infrastructureCostMax: data.summary.infrastructureCostMax,
           totalEstimatedCostMin: data.summary.totalCostMin,
           totalEstimatedCostMax: data.summary.totalCostMax,
-          processingTime: data.processingTime
-        }
+          processingTime: data.processingTime,
+        },
       };
-      
-      const blob = new Blob([JSON.stringify(exportData, null, 2)], { 
-        type: 'application/json' 
-      });
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
-      a.download = `content-analysis-${Date.now()}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      a.href = url; a.download = `content-analysis-${Date.now()}.json`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      
-      toast({
-        title: "Export Successful",
-        description: "Analysis data exported as JSON file",
-      });
-    } catch (error) {
-      toast({
-        title: "Export Failed",
-        description: "Failed to export analysis data",
-        variant: "destructive",
-      });
+      toast({ title: "Export Successful", description: "Analysis data exported as JSON file" });
+    } catch {
+      toast({ title: "Export Failed", description: "Failed to export analysis data", variant: "destructive" });
     }
   };
 
   const handleExportCSV = () => {
     try {
-      // Create CSV content
       let csvContent = "Content Analysis Report\n\n";
       csvContent += `Title,${data.contentInfo.title}\n`;
       csvContent += `Platform,${data.contentInfo.platform}\n`;
@@ -186,472 +163,476 @@ export default function AnalysisResults({ data, onNewAnalysis, hideShareButton =
       csvContent += `Tool Subscription Costs,$${data.summary.toolSubscriptionCostMin}-$${data.summary.toolSubscriptionCostMax}\n`;
       csvContent += `Infrastructure Costs,$${data.summary.infrastructureCostMin}-$${data.summary.infrastructureCostMax}\n`;
       csvContent += `Total Estimated Cost Range,$${data.summary.totalCostMin}-$${data.summary.totalCostMax}\n\n`;
-      
-      // Experiments section
-      csvContent += "Experiments\n";
-      csvContent += "Title,Description,Timestamp,Complexity,Estimated Cost,Tools Used\n";
+      csvContent += "Experiments\nTitle,Description,Timestamp,Complexity,Estimated Cost,Tools Used\n";
       data.experiments.forEach(exp => {
-        const toolsList = exp.tools.join('; ');
-        csvContent += `"${exp.title}","${exp.description}","${exp.timestamp}","${exp.complexity}","$${exp.estimatedCostMin}-$${exp.estimatedCostMax}","${toolsList}"\n`;
+        csvContent += `"${exp.title}","${exp.description}","${exp.timestamp}","${exp.complexity}","$${exp.estimatedCostMin}-$${exp.estimatedCostMax}","${exp.tools.join('; ')}"\n`;
       });
-      
-      csvContent += "\nTools\n";
-      csvContent += "Name,Category,Description,Difficulty,Monthly Cost,Free Tier,Implementation Time,URL\n";
+      csvContent += "\nTools\nName,Category,Description,Difficulty,Monthly Cost,Free Tier,Implementation Time,URL\n";
       data.tools.forEach(tool => {
-        const monthlyCost = tool.pricing.monthlyMin && tool.pricing.monthlyMax 
-          ? `$${tool.pricing.monthlyMin}-${tool.pricing.monthlyMax}` 
-          : tool.pricing.monthlyMin 
-            ? `$${tool.pricing.monthlyMin}` 
-            : 'N/A';
+        const monthlyCost = tool.pricing.monthlyMin && tool.pricing.monthlyMax
+          ? `$${tool.pricing.monthlyMin}-${tool.pricing.monthlyMax}`
+          : tool.pricing.monthlyMin ? `$${tool.pricing.monthlyMin}` : 'N/A';
         csvContent += `"${tool.name}","${tool.category}","${tool.description}","${tool.difficulty}","${monthlyCost}","${tool.pricing.free ? 'Yes' : 'No'}","${tool.timeToImplement}","${tool.url}"\n`;
       });
-      
       const blob = new Blob([csvContent], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
-      a.download = `content-analysis-${Date.now()}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      a.href = url; a.download = `content-analysis-${Date.now()}.csv`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      
-      toast({
-        title: "Export Successful",
-        description: "Analysis data exported as CSV file",
-      });
-    } catch (error) {
-      toast({
-        title: "Export Failed",
-        description: "Failed to export analysis data",
-        variant: "destructive",
-      });
+      toast({ title: "Export Successful", description: "Analysis data exported as CSV file" });
+    } catch {
+      toast({ title: "Export Failed", description: "Failed to export analysis data", variant: "destructive" });
     }
   };
 
   const handleShare = async () => {
     try {
-      if (!analysisId) {
-        throw new Error('No analysis ID available for sharing');
-      }
-
-      // Generate share ID via API
-      const response = await fetch(`/api/analyses/${analysisId}/share`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate share link');
-      }
-
+      if (!analysisId) throw new Error('No analysis ID available');
+      const response = await fetch(`/api/analyses/${analysisId}/share`, { method: 'POST', credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to generate share link');
       const { shareUrl } = await response.json();
-
-      // Copy to clipboard
       await navigator.clipboard.writeText(shareUrl);
-      
-      toast({
-        title: "Share Link Copied!",
-        description: "Anyone with this link can view your analysis",
-      });
-    } catch (error) {
-      toast({
-        title: "Share Failed",
-        description: "Failed to generate shareable link",
-        variant: "destructive",
-      });
+      toast({ title: "Share Link Copied!", description: "Anyone with this link can view your analysis" });
+    } catch {
+      toast({ title: "Share Failed", description: "Failed to generate shareable link", variant: "destructive" });
     }
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-6">
-      {/* Header with content info */}
-      <Card>
-        <CardHeader className="pb-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="space-y-1.5 flex-1 min-w-0">
-              <CardTitle className="text-xl leading-tight">{data.contentInfo.title}</CardTitle>
-              <CardDescription className="flex items-center gap-3 flex-wrap">
-                <Badge variant="outline">{data.contentInfo.platform}</Badge>
-                <span className="text-muted-foreground text-sm">
-                  Processed in {data.processingTime}s
-                </span>
-              </CardDescription>
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {!hideShareButton && (
-                <Button 
-                  variant="outline" 
-                  size="default" 
-                  onClick={handleShare}
-                  data-testid="button-share"
+    <div className="space-y-6">
+      {/* ── Summary card ── */}
+      <div className="editorial-container mx-auto animate-fade-up" style={{ opacity: 0 }}>
+        <Card className="border border-border">
+          <CardHeader className="pb-3">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div className="space-y-1 flex-1 min-w-0">
+                <CardTitle
+                  className="leading-snug"
+                  style={{ fontFamily: "var(--font-serif)", fontSize: "1.2rem" }}
                 >
-                  <Share2 className="w-4 h-4 mr-2" />
-                  Share
-                </Button>
-              )}
-              
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="default" data-testid="button-export">
-                    <Download className="w-4 h-4 mr-2" />
-                    Export
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={handleExportJSON} data-testid="export-json">
-                    <FileText className="w-4 h-4 mr-2" />
-                    Export as JSON
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleExportCSV} data-testid="export-csv">
-                    <FileSpreadsheet className="w-4 h-4 mr-2" />
-                    Export as CSV
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex flex-col items-center justify-center p-5 bg-muted/50 rounded-lg min-h-[100px]">
-              <div className="text-3xl font-bold text-foreground">{data.experiments?.length || 0}</div>
-              <div className="text-sm text-muted-foreground mt-1">Experiments Found</div>
-            </div>
-            <div className="flex flex-col items-center justify-center p-5 bg-muted/50 rounded-lg min-h-[100px]">
-              <div className="text-3xl font-bold text-foreground">{data.tools?.length || 0}</div>
-              <div className="text-sm text-muted-foreground mt-1">Tools Identified</div>
-            </div>
-            <div className="flex flex-col items-center justify-center p-5 bg-emerald/10 rounded-lg min-h-[100px]">
-              <div className="text-2xl font-bold text-emerald">
-                ${data.summary.totalCostMin}-${data.summary.totalCostMax}
+                  {data.contentInfo.title}
+                </CardTitle>
+                <CardDescription className="flex items-center gap-3 flex-wrap">
+                  <Badge variant="outline" style={BADGE_PILL}>{data.contentInfo.platform}</Badge>
+                  <span className="text-xs text-muted-foreground">
+                    Processed in {data.processingTime}s
+                  </span>
+                </CardDescription>
               </div>
-              <div className="text-sm text-muted-foreground mt-1">Est. Monthly Cost Range</div>
-              <div className="text-xs text-muted-foreground/80 mt-2 text-center space-y-0.5">
-                <div>Tools: ${data.summary.toolSubscriptionCostMin}-${data.summary.toolSubscriptionCostMax}</div>
-                {(data.summary.infrastructureCostMin > 0 || data.summary.infrastructureCostMax > 0) && (
-                  <div>Infrastructure: ${data.summary.infrastructureCostMin}-${data.summary.infrastructureCostMax}</div>
+              <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+                {!hideShareButton && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleShare}
+                    style={{ borderRadius: "100px", fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.04em" }}
+                    data-testid="button-share"
+                  >
+                    <Share2 className="w-3.5 h-3.5 mr-1.5" />
+                    Share
+                  </Button>
+                )}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      style={{ borderRadius: "100px", fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.04em" }}
+                      data-testid="button-export"
+                    >
+                      <Download className="w-3.5 h-3.5 mr-1.5" />
+                      Export
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleExportJSON} data-testid="export-json">
+                      <FileText className="w-4 h-4 mr-2" />
+                      Export as JSON
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleExportCSV} data-testid="export-csv">
+                      <FileSpreadsheet className="w-4 h-4 mr-2" />
+                      Export as CSV
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex flex-col items-center justify-center p-5 bg-muted rounded-md min-h-[90px]">
+                <div className="text-3xl font-bold" style={{ fontFamily: "var(--font-serif)" }}>
+                  {data.experiments?.length || 0}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1 uppercase tracking-wide">Experiments Found</div>
+              </div>
+              <div className="flex flex-col items-center justify-center p-5 bg-muted rounded-md min-h-[90px]">
+                <div className="text-3xl font-bold" style={{ fontFamily: "var(--font-serif)" }}>
+                  {data.tools?.length || 0}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1 uppercase tracking-wide">Tools Identified</div>
+              </div>
+              <div
+                className="flex flex-col items-center justify-center p-5 rounded-md min-h-[90px]"
+                style={{ background: "hsl(var(--sage-light))" }}
+              >
+                <div
+                  className="text-2xl font-bold"
+                  style={{ fontFamily: "var(--font-serif)", color: "hsl(var(--sage))" }}
+                >
+                  ${data.summary.totalCostMin}–${data.summary.totalCostMax}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1 uppercase tracking-wide">Est. Monthly Cost</div>
+                <div className="text-xs text-muted-foreground/70 mt-1.5 text-center space-y-0.5">
+                  <div>Tools: ${data.summary.toolSubscriptionCostMin}–${data.summary.toolSubscriptionCostMax}</div>
+                  {(data.summary.infrastructureCostMin > 0 || data.summary.infrastructureCostMax > 0) && (
+                    <div>Infra: ${data.summary.infrastructureCostMin}–${data.summary.infrastructureCostMax}</div>
+                  )}
+                </div>
+                {data.summary.costClassification && (
+                  <Badge
+                    className="mt-2"
+                    style={{ ...BADGE_PILL, ...getCostStyle(data.summary.costClassification) }}
+                    data-testid={`badge-cost-${data.summary.costClassification.toLowerCase()}`}
+                  >
+                    {data.summary.costClassificationLabel || data.summary.costClassification}
+                  </Badge>
                 )}
               </div>
-              {data.summary.costClassification && (
-                <Badge 
-                  className={`mt-2 ${getCostClassificationColor(data.summary.costClassification)}`}
-                  data-testid={`badge-cost-${data.summary.costClassification.toLowerCase()}`}
-                >
-                  {data.summary.costClassificationLabel || data.summary.costClassification}
-                </Badge>
-              )}
             </div>
-          </div>
-          
-          {analysisId && (
-            <div className="mt-6 pt-4 border-t flex items-center justify-center gap-3">
-              <span className="text-sm text-muted-foreground">Was this analysis helpful?</span>
-              <FeedbackButton 
-                analysisId={analysisId} 
-                feedbackType="overall"
-                variant="ghost"
-                size="sm"
-              />
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* AI Transcription Warning Banner */}
+            {analysisId && (
+              <div className="mt-5 pt-4 border-t border-border flex items-center justify-center gap-3">
+                <span className="text-sm text-muted-foreground">Was this analysis helpful?</span>
+                <FeedbackButton analysisId={analysisId} feedbackType="overall" variant="ghost" size="sm" />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── Warning banners ── */}
       {data.contentInfo.transcriptSource === 'ai-generated' && (
-        <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800" data-testid="banner-ai-transcript">
-          <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="font-medium text-blue-900 dark:text-blue-100">AI-Generated Transcript</p>
-            <p className="text-sm text-blue-700 dark:text-blue-300">
-              YouTube captions were not available for this video. The transcript was generated using AI, 
-              which may contain some inaccuracies. Experiment and tool identification should still be reliable.
-            </p>
+        <div className="editorial-container mx-auto">
+          <div
+            className="flex items-start gap-3 p-4 rounded-md border"
+            style={{ background: "hsl(205 60% 95%)", borderColor: "hsl(205 40% 80%)" }}
+            data-testid="banner-ai-transcript"
+          >
+            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: "hsl(205 60% 40%)" }} />
+            <div>
+              <p className="font-medium text-sm" style={{ color: "hsl(205 60% 25%)" }}>AI-Generated Transcript</p>
+              <p className="text-sm mt-0.5" style={{ color: "hsl(205 50% 35%)" }}>
+                YouTube captions were not available. The transcript was generated using AI, which may contain inaccuracies.
+              </p>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Description-Only Warning Banner */}
       {data.contentInfo.transcriptSource === 'description-only' && (
-        <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800" data-testid="banner-description-only">
-          <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="font-medium text-amber-900 dark:text-amber-100">Limited Analysis</p>
-            <p className="text-sm text-amber-700 dark:text-amber-300">
-              No transcript or AI transcription was available. This analysis is based only on the video description, 
-              which may not capture all experiments and tools mentioned in the video.
-            </p>
+        <div className="editorial-container mx-auto">
+          <div
+            className="flex items-start gap-3 p-4 rounded-md border"
+            style={{ background: "hsl(var(--amber-light))", borderColor: "hsl(var(--amber) / 0.3)" }}
+            data-testid="banner-description-only"
+          >
+            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: "hsl(var(--amber))" }} />
+            <div>
+              <p className="font-medium text-sm" style={{ color: "hsl(var(--foreground))" }}>Limited Analysis</p>
+              <p className="text-sm mt-0.5 text-muted-foreground">
+                No transcript or AI transcription was available. This analysis is based only on the video description.
+              </p>
+            </div>
           </div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Experiments Section */}
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
-            <Zap className="w-5 h-5 text-amber" />
-            LLM Experiments
-          </h2>
-          <div className="space-y-4">
-            {data.experiments.map((experiment, index) => (
-              <Card key={experiment.id} className="hover-elevate">
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-lg leading-snug">{experiment.title}</CardTitle>
+      {/* ── Experiments + Tools ── */}
+      <div className="editorial-container mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Experiments */}
+          <div className="space-y-4 animate-fade-up-1" style={{ opacity: 0 }}>
+            <h2
+              className="flex items-center gap-2 text-lg font-semibold"
+              style={{ fontFamily: "var(--font-serif)" }}
+            >
+              <Zap className="w-5 h-5" style={{ color: "hsl(var(--amber))" }} />
+              LLM Experiments
+            </h2>
+            <div className="space-y-4">
+              {data.experiments.map((experiment, index) => (
+                <Card key={experiment.id} className="border border-border hover-elevate">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <CardTitle
+                          className="text-base leading-snug"
+                          style={{ fontFamily: "var(--font-serif)" }}
+                        >
+                          {experiment.title}
+                        </CardTitle>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {analysisId && (
+                          <FeedbackButton analysisId={analysisId} feedbackType="experiment" targetId={index.toString()} />
+                        )}
+                        <Badge style={{ ...BADGE_PILL, ...getComplexityStyle(experiment.complexity) }}>
+                          {experiment.complexity}
+                        </Badge>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {analysisId && (
-                        <FeedbackButton 
-                          analysisId={analysisId} 
-                          feedbackType="experiment"
-                          targetId={index.toString()}
-                        />
-                      )}
-                      <Badge className={getComplexityColor(experiment.complexity)}>
-                        {experiment.complexity}
-                      </Badge>
-                    </div>
-                  </div>
-                  <CardDescription className="mt-1.5">{experiment.description}</CardDescription>
-                </CardHeader>
-                <CardContent className="pt-2">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between text-sm gap-2">
-                      <span className="text-muted-foreground">Timestamp: {experiment.timestamp}</span>
-                      <span className="font-medium text-emerald whitespace-nowrap">
-                        ${experiment.estimatedCostMin}-${experiment.estimatedCostMax}/mo
+                    <CardDescription className="mt-1">{experiment.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-2">
+                    <div className="flex items-center justify-between text-sm gap-2 mb-2.5">
+                      <span className="text-muted-foreground">@ {experiment.timestamp}</span>
+                      <span className="font-semibold whitespace-nowrap" style={{ color: "hsl(var(--sage))" }}>
+                        ${experiment.estimatedCostMin}–${experiment.estimatedCostMax}/mo
                       </span>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {experiment.tools.map((toolId) => {
                         const tool = data.tools.find(t => t.id === toolId);
                         return (
-                          <Badge key={toolId} variant="secondary" className="text-xs" data-testid={`badge-tool-${toolId}`}>
+                          <Badge
+                            key={toolId}
+                            variant="secondary"
+                            style={BADGE_PILL}
+                            data-testid={`badge-tool-${toolId}`}
+                          >
                             {tool?.name || toolId}
                           </Badge>
                         );
                       })}
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Tools Section */}
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-emerald" />
-            Required Tools
-          </h2>
-          <div className="space-y-4">
-            {data.tools.map((tool) => (
-              <Card key={tool.id} className="hover-elevate">
-                <CardHeader className="pb-2">
-                  {/* Tool header with name, badges, and pricing */}
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="space-y-2 flex-1 min-w-0">
-                      <CardTitle className="text-lg flex items-center gap-2 leading-snug">
-                        {tool.name}
-                        <a 
-                          href={tool.url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-muted-foreground hover:text-primary flex-shrink-0"
-                          data-testid={`link-tool-${tool.id}`}
+          {/* Tools */}
+          <div className="space-y-4 animate-fade-up-2" style={{ opacity: 0 }}>
+            <h2
+              className="flex items-center gap-2 text-lg font-semibold"
+              style={{ fontFamily: "var(--font-serif)" }}
+            >
+              <TrendingUp className="w-5 h-5" style={{ color: "hsl(var(--sage))" }} />
+              Required Tools
+            </h2>
+            <div className="space-y-4">
+              {data.tools.map((tool) => (
+                <Card key={tool.id} className="border border-border hover-elevate">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="space-y-1.5 flex-1 min-w-0">
+                        <CardTitle
+                          className="text-base flex items-center gap-2 leading-snug"
+                          style={{ fontFamily: "var(--font-serif)" }}
                         >
-                          <ExternalLink className="w-4 h-4" />
-                        </a>
-                      </CardTitle>
-                      <div className="flex flex-wrap gap-1.5">
-                        <Badge variant="outline">{tool.category}</Badge>
-                        <Badge className={getDifficultyColor(tool.difficulty)}>
-                          {tool.difficulty}
-                        </Badge>
-                      </div>
-                    </div>
-                    
-                    {/* Pricing column - fixed width for alignment */}
-                    <div className="flex items-start gap-3 flex-shrink-0">
-                      {analysisId && (
-                        <FeedbackButton 
-                          analysisId={analysisId} 
-                          feedbackType="tool"
-                          targetId={tool.name}
-                        />
-                      )}
-                      <div className="text-right min-w-[100px]">
-                        {tool.pricing.free ? (
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <Badge variant="secondary" className="bg-emerald text-emerald-foreground">
-                                Free
-                              </Badge>
-                              {tool.pricing.pricingSource === 'ai-estimated' && (
-                                <Badge variant="outline" className="text-xs" title="Pricing estimated via AI analysis">
-                                  AI Est.
-                                </Badge>
-                              )}
-                            </div>
-                            {tool.pricing.tierName && (
-                              <div className="text-xs text-muted-foreground">
-                                {tool.pricing.tierName}
-                              </div>
-                            )}
-                            {tool.pricing.monthlyMin && tool.pricing.monthlyMin > 0 && (
-                              <div className="text-xs text-muted-foreground">
-                                Paid: {tool.pricing.monthlyMax 
-                                  ? `$${tool.pricing.monthlyMin}-${tool.pricing.monthlyMax}` 
-                                  : `$${tool.pricing.monthlyMin}+`}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <span className="font-semibold text-foreground whitespace-nowrap">
-                                {tool.pricing.monthlyMin && tool.pricing.monthlyMax ? (
-                                  `$${tool.pricing.monthlyMin}-${tool.pricing.monthlyMax}/mo`
-                                ) : tool.pricing.monthlyMin ? (
-                                  `$${tool.pricing.monthlyMin}+/mo`
-                                ) : (
-                                  'Contact'
-                                )}
-                              </span>
-                              {tool.pricing.pricingSource === 'ai-estimated' && (
-                                <Badge variant="outline" className="text-xs" title="Pricing estimated via AI analysis">
-                                  AI Est.
-                                </Badge>
-                              )}
-                            </div>
-                            {tool.pricing.tierName && (
-                              <div className="text-xs text-muted-foreground">
-                                {tool.pricing.tierName}
-                              </div>
-                            )}
-                            {tool.pricing.priceType && (
-                              <div className="text-xs text-muted-foreground">
-                                {tool.pricing.priceType === 'usage-based' && 'Usage-based'}
-                                {tool.pricing.priceType === 'per-token' && 'Per-token'}
-                                {tool.pricing.priceType === 'fixed' && 'Fixed price'}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <CardDescription className="mt-2">{tool.description}</CardDescription>
-                </CardHeader>
-                <CardContent className="pt-2">
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Clock className="w-4 h-4 flex-shrink-0" />
-                      <span>Implementation time: {tool.timeToImplement}</span>
-                    </div>
-                    
-                    <Separator />
-                    
-                    <div>
-                      <h4 className="text-sm font-medium text-foreground mb-2">Key Features:</h4>
-                      <ul className="text-sm text-muted-foreground space-y-1.5">
-                        {tool.pricing.features.map((feature, index) => (
-                          <li key={index} className="flex items-start gap-2">
-                            <Star className="w-3 h-3 mt-1 text-amber flex-shrink-0" />
-                            <span>{feature}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    {tool.suggestedContext && tool.pricing.pricingSource === 'ai-estimated' && (
-                      <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border-l-2 border-blue-500">
-                        <div className="flex items-center gap-2 mb-1">
-                          <AlertCircle className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                          <h4 className="text-sm font-medium text-foreground">AI Pricing Estimate:</h4>
+                          {tool.name}
+                          <a
+                            href={tool.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-muted-foreground flex-shrink-0"
+                            style={{ textDecoration: "none" }}
+                            data-testid={`link-tool-${tool.id}`}
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                        </CardTitle>
+                        <div className="flex flex-wrap gap-1.5">
+                          <Badge variant="outline" style={BADGE_PILL}>{tool.category}</Badge>
+                          <Badge style={{ ...BADGE_PILL, ...getDifficultyStyle(tool.difficulty) }}>
+                            {tool.difficulty}
+                          </Badge>
                         </div>
-                        <p className="text-xs text-muted-foreground">{tool.suggestedContext}</p>
-                        <p className="text-xs text-muted-foreground mt-1 italic">
-                          Verify pricing on the official website.
-                        </p>
                       </div>
-                    )}
 
-                    {tool.pricing.allTiers && tool.pricing.allTiers.length > 1 && (
-                      <div>
-                        <h4 className="text-sm font-medium text-foreground mb-2">Available Pricing Tiers:</h4>
-                        <div className="space-y-1.5">
-                          {tool.pricing.allTiers.map((tier, index) => (
-                            <div key={index} className="flex items-center justify-between text-xs p-2.5 bg-muted/30 rounded">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium text-foreground">{tier.tier}</span>
-                                {tier.priceType === 'free' && (
-                                  <Badge variant="secondary" className="text-xs bg-emerald text-emerald-foreground">Free</Badge>
+                      <div className="flex items-start gap-2 flex-shrink-0">
+                        {analysisId && (
+                          <FeedbackButton analysisId={analysisId} feedbackType="tool" targetId={tool.name} />
+                        )}
+                        <div className="text-right min-w-[90px]">
+                          {tool.pricing.free ? (
+                            <div className="space-y-0.5">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <Badge style={{ ...BADGE_PILL, ...getDifficultyStyle('Beginner') }}>Free</Badge>
+                                {tool.pricing.pricingSource === 'ai-estimated' && (
+                                  <Badge variant="outline" style={BADGE_PILL} title="AI estimated">AI Est.</Badge>
                                 )}
                               </div>
-                              <div className="text-right">
-                                <div className="font-medium text-foreground">
-                                  {tier.monthlyMin === 0 && !tier.monthlyMax ? (
-                                    'Free'
-                                  ) : tier.monthlyMax ? (
-                                    `$${tier.monthlyMin}-${tier.monthlyMax}/mo`
-                                  ) : (
-                                    `$${tier.monthlyMin}+/mo`
+                              {tool.pricing.tierName && (
+                                <div className="text-xs text-muted-foreground">{tool.pricing.tierName}</div>
+                              )}
+                              {tool.pricing.monthlyMin && tool.pricing.monthlyMin > 0 && (
+                                <div className="text-xs text-muted-foreground">
+                                  Paid: {tool.pricing.monthlyMax
+                                    ? `$${tool.pricing.monthlyMin}–${tool.pricing.monthlyMax}`
+                                    : `$${tool.pricing.monthlyMin}+`}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="space-y-0.5">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <span className="font-semibold text-sm whitespace-nowrap">
+                                  {tool.pricing.monthlyMin && tool.pricing.monthlyMax
+                                    ? `$${tool.pricing.monthlyMin}–${tool.pricing.monthlyMax}/mo`
+                                    : tool.pricing.monthlyMin
+                                    ? `$${tool.pricing.monthlyMin}+/mo`
+                                    : 'Contact'}
+                                </span>
+                                {tool.pricing.pricingSource === 'ai-estimated' && (
+                                  <Badge variant="outline" style={BADGE_PILL} title="AI estimated">AI Est.</Badge>
+                                )}
+                              </div>
+                              {tool.pricing.tierName && (
+                                <div className="text-xs text-muted-foreground">{tool.pricing.tierName}</div>
+                              )}
+                              {tool.pricing.priceType && (
+                                <div className="text-xs text-muted-foreground">
+                                  {tool.pricing.priceType === 'usage-based' && 'Usage-based'}
+                                  {tool.pricing.priceType === 'per-token' && 'Per-token'}
+                                  {tool.pricing.priceType === 'fixed' && 'Fixed price'}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <CardDescription className="mt-2">{tool.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-2">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Clock className="w-3.5 h-3.5 flex-shrink-0" />
+                        <span>Implementation: {tool.timeToImplement}</span>
+                      </div>
+
+                      <Separator />
+
+                      <div>
+                        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                          Key Features
+                        </h4>
+                        <ul className="text-sm text-muted-foreground space-y-1.5">
+                          {tool.pricing.features.map((feature, index) => (
+                            <li key={index} className="flex items-start gap-2">
+                              <Star className="w-3 h-3 mt-1 flex-shrink-0" style={{ color: "hsl(var(--amber))" }} />
+                              <span>{feature}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      {tool.suggestedContext && tool.pricing.pricingSource === 'ai-estimated' && (
+                        <div
+                          className="p-3 rounded-md border"
+                          style={{ background: "hsl(205 60% 95%)", borderColor: "hsl(205 40% 80%)" }}
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "hsl(205 60% 40%)" }} />
+                            <h4 className="text-xs font-semibold uppercase tracking-wide" style={{ color: "hsl(205 60% 30%)" }}>
+                              AI Pricing Estimate
+                            </h4>
+                          </div>
+                          <p className="text-xs text-muted-foreground">{tool.suggestedContext}</p>
+                          <p className="text-xs text-muted-foreground mt-1 italic">Verify pricing on the official website.</p>
+                        </div>
+                      )}
+
+                      {tool.pricing.allTiers && tool.pricing.allTiers.length > 1 && (
+                        <div>
+                          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                            Available Tiers
+                          </h4>
+                          <div className="space-y-1.5">
+                            {tool.pricing.allTiers.map((tier, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center justify-between text-xs p-2 rounded-md"
+                                style={{ background: "hsl(var(--muted))" }}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">{tier.tier}</span>
+                                  {tier.priceType === 'free' && (
+                                    <Badge style={{ ...BADGE_PILL, ...getDifficultyStyle('Beginner') }}>Free</Badge>
                                   )}
                                 </div>
-                                {tier.usage && (
-                                  <div className="text-muted-foreground text-xs">{tier.usage}</div>
-                                )}
+                                <div className="text-right">
+                                  <div className="font-medium">
+                                    {tier.monthlyMin === 0 && !tier.monthlyMax
+                                      ? 'Free'
+                                      : tier.monthlyMax
+                                      ? `$${tier.monthlyMin}–${tier.monthlyMax}/mo`
+                                      : `$${tier.monthlyMin}+/mo`}
+                                  </div>
+                                  {tier.usage && (
+                                    <div className="text-muted-foreground">{tier.usage}</div>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {tool.mentioned.length > 0 && (
-                      <div>
-                        <h4 className="text-sm font-medium text-foreground mb-2">Mentioned in:</h4>
-                        <div className="flex flex-wrap gap-1.5">
-                          {tool.mentioned.map((mention, index) => (
-                            <Badge key={index} variant="outline" className="text-xs" data-testid={`badge-mention-${index}`}>
-                              {mention}
-                            </Badge>
-                          ))}
+                      {tool.mentioned.length > 0 && (
+                        <div>
+                          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                            Mentioned in
+                          </h4>
+                          <div className="flex flex-wrap gap-1.5">
+                            {tool.mentioned.map((mention, index) => (
+                              <Badge
+                                key={index}
+                                variant="outline"
+                                style={BADGE_PILL}
+                                data-testid={`badge-mention-${index}`}
+                              >
+                                {mention}
+                              </Badge>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Infrastructure Costs Section */}
+      {/* ── Infrastructure costs ── */}
       {data.summary.infrastructureBreakdown && data.summary.infrastructureBreakdown.length > 0 && (
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
-            <DollarSign className="w-5 h-5 text-emerald" />
+        <div className="editorial-container mx-auto space-y-4 animate-fade-up-3" style={{ opacity: 0 }}>
+          <h2
+            className="flex items-center gap-2 text-lg font-semibold"
+            style={{ fontFamily: "var(--font-serif)" }}
+          >
+            <DollarSign className="w-5 h-5" style={{ color: "hsl(var(--sage))" }} />
             Infrastructure Costs
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {data.summary.infrastructureBreakdown.map((infra, index) => (
-              <Card key={index} className="hover-elevate">
+              <Card key={index} className="border border-border hover-elevate">
                 <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between gap-2">
                     <div className="space-y-1">
-                      <CardTitle className="text-base">{infra.toolName}</CardTitle>
-                      <Badge variant="outline" className="text-xs">{infra.component}</Badge>
+                      <CardTitle className="text-sm" style={{ fontFamily: "var(--font-serif)" }}>
+                        {infra.toolName}
+                      </CardTitle>
+                      <Badge variant="outline" style={BADGE_PILL}>{infra.component}</Badge>
                     </div>
-                    <div className="text-right">
-                      <div className="font-semibold text-emerald">
-                        ${infra.costMin}-${infra.costMax}/mo
-                      </div>
+                    <div className="font-semibold text-sm" style={{ color: "hsl(var(--sage))" }}>
+                      ${infra.costMin}–${infra.costMax}/mo
                     </div>
                   </div>
                 </CardHeader>
@@ -664,32 +645,39 @@ export default function AnalysisResults({ data, onNewAnalysis, hideShareButton =
         </div>
       )}
 
-      {/* Pricing Disclaimer */}
-      <Card className="bg-muted/30">
-        <CardContent className="pt-4">
-          <div className="flex items-start gap-2 text-sm text-muted-foreground">
-            <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-            <div>
-              <strong className="text-foreground">Pricing Disclaimer:</strong>
-              {" "}
-              Cost ranges are estimated using 2025 pricing data, last updated September 2025. 
-              Actual costs may vary based on usage, subscription tiers, and current pricing. 
-              Please verify current pricing on each tool's official website.
+      {/* ── Disclaimer ── */}
+      <div className="editorial-container mx-auto">
+        <Card className="border border-border bg-muted/40">
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-start gap-2 text-sm text-muted-foreground">
+              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <div>
+                <strong className="text-foreground font-medium">Pricing Disclaimer:</strong>
+                {" "}Cost ranges are estimated using 2025 pricing data, last updated September 2025.
+                Actual costs may vary. Please verify current pricing on each tool's official website.
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Action buttons */}
-      <div className="flex justify-center pt-6">
-        <Button 
-          onClick={onNewAnalysis}
-          className="bg-primary hover:bg-primary/90 text-primary-foreground"
-          data-testid="button-new-analysis"
-        >
-          Analyze Another Content
-        </Button>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* ── New analysis CTA ── */}
+      {onNewAnalysis && (
+        <div className="editorial-container mx-auto flex justify-center pb-6">
+          <Button
+            onClick={onNewAnalysis}
+            style={{
+              borderRadius: "100px",
+              fontSize: "0.82rem",
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
+            }}
+            data-testid="button-new-analysis"
+          >
+            Analyze Another Video
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,34 +1,22 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
-import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { 
-  ArrowLeft, 
-  Star, 
-  Eye, 
-  Edit2, 
-  Save, 
-  X,
-  Plus,
-  Tag
+import {
+  ArrowLeft, Star, Eye, Edit2, Save, X, Plus, Tag,
 } from "lucide-react";
 import AnalysisResults from "@/components/AnalysisResults";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import Header from "@/components/Header";
 
 interface AnalysisDetailData {
   id: string;
-  contentInfo: {
-    title: string;
-    duration: string | null;
-    platform: string;
-    url: string;
-  };
+  contentInfo: { title: string; duration: string | null; platform: string; url: string; };
   experiments: any[];
   tools: any[];
   summary: any;
@@ -61,29 +49,17 @@ export default function AnalysisDetail() {
   });
 
   const updateMetadataMutation = useMutation({
-    mutationFn: async (metadata: {
-      label?: string;
-      tags?: string[];
-      isFavorite?: boolean;
-      notes?: string;
-    }) => {
+    mutationFn: async (metadata: { label?: string; tags?: string[]; isFavorite?: boolean; notes?: string; }) => {
       return apiRequest("PATCH", `/api/analyses/${id}`, metadata);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/analyses", id] });
       queryClient.invalidateQueries({ queryKey: ["/api/analyses"] });
       setIsEditingMetadata(false);
-      toast({
-        title: "Updated",
-        description: "Analysis metadata has been updated",
-      });
+      toast({ title: "Updated", description: "Analysis metadata has been updated" });
     },
     onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to update metadata",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to update metadata", variant: "destructive" });
     },
   });
 
@@ -123,110 +99,139 @@ export default function AnalysisDetail() {
     }
   };
 
-  const removeTag = (tag: string) => {
-    setEditTags(editTags.filter((t) => t !== tag));
-  };
+  const removeTag = (tag: string) => setEditTags(editTags.filter((t) => t !== tag));
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-muted-foreground">Loading analysis...</div>
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="flex items-center justify-center py-24 text-muted-foreground">
+          Loading analysis…
+        </div>
       </div>
     );
   }
 
   if (!analysis) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="w-full max-w-md mx-4">
-          <CardContent className="pt-6 text-center">
-            <h2 className="text-xl font-semibold mb-2">Analysis Not Found</h2>
-            <p className="text-muted-foreground mb-4">
-              This analysis doesn't exist or has been removed.
-            </p>
-            <Link href="/archive">
-              <Button>Back to Archive</Button>
-            </Link>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="editorial-container mx-auto py-16 text-center">
+          <Card className="border border-border max-w-sm mx-auto">
+            <CardContent className="pt-6 pb-6">
+              <h2
+                className="font-semibold mb-2"
+                style={{ fontFamily: "var(--font-serif)", fontSize: "1.25rem" }}
+              >
+                Analysis Not Found
+              </h2>
+              <p className="text-muted-foreground text-sm mb-4">
+                This analysis doesn't exist or has been removed.
+              </p>
+              <Link href="/archive">
+                <Button style={{ borderRadius: "100px" }}>Back to Archive</Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Modern Sticky Header with Glassmorphism */}
-      <header className="sticky top-16 z-40 bg-background/80 backdrop-blur-xl border-b border-border/50 shadow-sm">
-        <div className="container max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4 min-w-0 flex-1">
+    <div className="min-h-screen bg-background pt-[58px]">
+      <Header />
+
+      {/* Sub-header */}
+      <header
+        className="sticky top-[58px] z-40 border-b border-border"
+        style={{ background: "hsl(var(--background) / 0.88)", backdropFilter: "blur(12px)" }}
+      >
+        <div className="editorial-container mx-auto py-3">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
               <Link href="/archive">
-                <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                  <Button variant="ghost" size="icon" className="hover-elevate" data-testid="button-back-archive">
-                    <ArrowLeft className="h-5 w-5" />
-                  </Button>
-                </motion.div>
+                <Button variant="ghost" size="icon" style={{ borderRadius: "100px" }} data-testid="button-back-archive">
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
               </Link>
-              <div className="min-w-0 flex-1">
-                <motion.h1 
-                  className="text-2xl font-bold truncate bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
+              <div className="min-w-0">
+                <h1
+                  className="truncate"
+                  style={{
+                    fontFamily: "var(--font-serif)",
+                    fontSize: "1.2rem",
+                    fontWeight: 600,
+                  }}
                 >
                   {analysis.label || analysis.contentInfo.title}
-                </motion.h1>
-                <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
-                  <span className="flex items-center gap-1.5">
-                    <Eye className="h-4 w-4 text-primary" />
+                </h1>
+                <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                  <span className="flex items-center gap-1">
+                    <Eye className="h-3.5 w-3.5" />
                     {analysis.viewCount} views
                   </span>
                   {analysis.isOwnedByCurrentSession && (
-                    <Badge variant="outline" className="text-xs">
+                    <Badge
+                      variant="outline"
+                      style={{ borderRadius: "100px", fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.04em" }}
+                    >
                       Your Analysis
                     </Badge>
                   )}
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="hover-elevate"
-                  onClick={() => toggleFavoriteMutation.mutate(!analysis.isFavorite)}
-                  data-testid="button-toggle-favorite"
-                >
-                  <Star
-                    className={`h-5 w-5 ${
-                      analysis.isFavorite
-                        ? "fill-yellow-500 text-yellow-500"
-                        : "text-muted-foreground"
-                    }`}
-                  />
-                </Button>
-              </motion.div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Button
+                variant="ghost"
+                size="icon"
+                style={{ borderRadius: "100px" }}
+                onClick={() => toggleFavoriteMutation.mutate(!analysis.isFavorite)}
+                data-testid="button-toggle-favorite"
+              >
+                <Star
+                  className="h-4 w-4"
+                  style={
+                    analysis.isFavorite
+                      ? { fill: "hsl(var(--amber))", color: "hsl(var(--amber))" }
+                      : {}
+                  }
+                />
+              </Button>
               {!isEditingMetadata ? (
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button variant="outline" size="default" onClick={startEditing} className="gap-2" data-testid="button-edit-metadata">
-                    <Edit2 className="h-4 w-4" />
-                    Edit
-                  </Button>
-                </motion.div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={startEditing}
+                  style={{ borderRadius: "100px", fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.04em" }}
+                  data-testid="button-edit-metadata"
+                >
+                  <Edit2 className="h-3.5 w-3.5 mr-1" />
+                  Edit
+                </Button>
               ) : (
                 <>
-                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                    <Button variant="outline" size="default" onClick={() => setIsEditingMetadata(false)} className="gap-2" data-testid="button-cancel-edit">
-                      <X className="h-4 w-4" />
-                      Cancel
-                    </Button>
-                  </motion.div>
-                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                    <Button size="default" onClick={saveMetadata} disabled={updateMetadataMutation.isPending} className="gap-2" data-testid="button-save-metadata">
-                      <Save className="h-4 w-4" />
-                      Save
-                    </Button>
-                  </motion.div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsEditingMetadata(false)}
+                    style={{ borderRadius: "100px", fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.04em" }}
+                    data-testid="button-cancel-edit"
+                  >
+                    <X className="h-3.5 w-3.5 mr-1" />
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={saveMetadata}
+                    disabled={updateMetadataMutation.isPending}
+                    style={{ borderRadius: "100px", fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.04em" }}
+                    data-testid="button-save-metadata"
+                  >
+                    <Save className="h-3.5 w-3.5 mr-1" />
+                    Save
+                  </Button>
                 </>
               )}
             </div>
@@ -234,114 +239,119 @@ export default function AnalysisDetail() {
         </div>
       </header>
 
-      <div className="container max-w-7xl mx-auto px-4 py-8">
-        {/* Metadata Edit Panel with Modern Styling */}
+      <div className="py-8">
         {isEditingMetadata && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-          >
-            <Card className="mb-6 border-border/50 bg-card/80 backdrop-blur-sm">
+          <div className="editorial-container mx-auto mb-6 animate-fade-up" style={{ opacity: 0 }}>
+            <Card className="border border-border">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Edit2 className="h-5 w-5 text-primary" />
+                <CardTitle
+                  className="flex items-center gap-2"
+                  style={{ fontFamily: "var(--font-serif)", fontSize: "1.1rem" }}
+                >
+                  <Edit2 className="h-4 w-4" style={{ color: "hsl(var(--sage))" }} />
                   Edit Metadata
                 </CardTitle>
               </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="text-sm font-medium mb-2 block">
-                  Custom Label
-                </label>
-                <Input
-                  placeholder="e.g., My RAG Chatbot Research"
-                  value={editLabel}
-                  onChange={(e) => setEditLabel(e.target.value)}
-                  data-testid="input-label"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Optional custom name for this analysis
-                </p>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium mb-2 block">Tags</label>
-                <div className="flex gap-2 mb-2">
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Custom Label</label>
                   <Input
-                    placeholder="Add a tag..."
-                    value={newTag}
-                    onChange={(e) => setNewTag(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTag())}
-                    data-testid="input-new-tag"
+                    placeholder="e.g., My RAG Chatbot Research"
+                    value={editLabel}
+                    onChange={(e) => setEditLabel(e.target.value)}
+                    data-testid="input-label"
                   />
-                  <Button type="button" onClick={addTag} size="sm" data-testid="button-add-tag">
-                    <Plus className="h-4 w-4" />
-                  </Button>
+                  <p className="text-xs text-muted-foreground mt-1">Optional custom name</p>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {editTags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="gap-1" data-testid={`badge-tag-${tag}`}>
-                      <Tag className="h-3 w-3" />
-                      {tag}
-                      <button
-                        onClick={() => removeTag(tag)}
-                        className="ml-1 hover:text-destructive"
-                        data-testid={`button-remove-tag-${tag}`}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-              </div>
 
-              <div>
-                <label className="text-sm font-medium mb-2 block">Notes</label>
-                <Textarea
-                  placeholder="Add your notes, observations, or learnings..."
-                  value={editNotes}
-                  onChange={(e) => setEditNotes(e.target.value)}
-                  rows={4}
-                  data-testid="textarea-notes"
-                />
-              </div>
-            </CardContent>
-          </Card>
-          </motion.div>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Tags</label>
+                  <div className="flex gap-2 mb-2">
+                    <Input
+                      placeholder="Add a tag…"
+                      value={newTag}
+                      onChange={(e) => setNewTag(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTag())}
+                      data-testid="input-new-tag"
+                    />
+                    <Button
+                      type="button"
+                      onClick={addTag}
+                      size="sm"
+                      style={{ borderRadius: "100px" }}
+                      data-testid="button-add-tag"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {editTags.map((tag) => (
+                      <Badge
+                        key={tag}
+                        variant="secondary"
+                        className="gap-1"
+                        style={{ borderRadius: "100px" }}
+                        data-testid={`badge-tag-${tag}`}
+                      >
+                        <Tag className="h-3 w-3" />
+                        {tag}
+                        <button
+                          onClick={() => removeTag(tag)}
+                          className="ml-1 hover:text-destructive transition-colors"
+                          data-testid={`button-remove-tag-${tag}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Notes</label>
+                  <Textarea
+                    placeholder="Add your notes, observations, or learnings…"
+                    value={editNotes}
+                    onChange={(e) => setEditNotes(e.target.value)}
+                    rows={4}
+                    data-testid="textarea-notes"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         )}
 
-        {/* Analysis Results */}
         <AnalysisResults
           data={{
             contentInfo: analysis.contentInfo,
             experiments: analysis.experiments,
             tools: analysis.tools,
             summary: analysis.summary,
-            processingTime: analysis.processingTime
+            processingTime: analysis.processingTime,
           }}
           analysisId={id}
         />
 
-        {/* Notes Display (when not editing) */}
         {!isEditingMetadata && analysis.notes && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-          >
-            <Card className="mt-6 border-border/50 bg-card/80 backdrop-blur-sm">
+          <div className="editorial-container mx-auto mt-6">
+            <Card className="border border-border">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Tag className="h-5 w-5 text-primary" />
+                <CardTitle
+                  className="flex items-center gap-2"
+                  style={{ fontFamily: "var(--font-serif)", fontSize: "1.1rem" }}
+                >
+                  <Tag className="h-4 w-4" style={{ color: "hsl(var(--sage))" }} />
                   Notes
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm whitespace-pre-wrap leading-relaxed">{analysis.notes}</p>
+                <p className="text-sm whitespace-pre-wrap leading-relaxed text-muted-foreground">
+                  {analysis.notes}
+                </p>
               </CardContent>
             </Card>
-          </motion.div>
+          </div>
         )}
       </div>
     </div>
