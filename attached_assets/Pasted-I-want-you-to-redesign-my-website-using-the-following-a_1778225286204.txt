@@ -1,0 +1,67 @@
+I want you to redesign my website using the following aesthetic guidelines. 
+First, read the source code / repo / files I provide, then apply this design 
+system faithfully.
+
+─── AESTHETIC DIRECTION ───
+Vibe: Clean-warm editorial — minimal but human, not sterile
+Tone: Refined personal brand — trustworthy, considered, quietly confident
+
+─── TYPOGRAPHY ───
+Serif (headings, hero name, section titles): Lora — use italic variant for 
+  emphasis and warmth
+Sans (body, nav, labels, UI): DM Sans — weights 300 (body), 400 (default), 
+  500 (medium), 600 (strong)
+Scale: clamp() for fluid headings; 0.78–0.95rem for supporting text
+
+─── COLOR SYSTEM ───
+Background:   #F7F4EF (cream base), #EDE9E1 (slightly darker), #E3DDD4 (borders/hover)
+Ink:          #1C1917 (primary), #44403C (secondary), #78716C (muted), #A8A29E (subtle)
+Accent green: #3D6B52 (sage — primary CTA, links, active states), #D4E8DB (sage light bg), #7BAD92 (sage mid)
+Accent amber: #A86B2A (secondary accent — labels, dates), #F2E4CF (amber light bg)
+Dividers:     rgba(28,25,23,0.10)
+
+─── LAYOUT ───
+Max content width: 780px centered with 1.5rem side padding
+Nav: fixed, 58px tall, frosted glass (backdrop-filter blur), 1px bottom border
+Sections: 4–5rem vertical padding
+No cards with heavy shadows — use 1px borders and background shifts instead
+
+─── COMPONENTS ───
+Buttons: pill-shaped (border-radius 100px), uppercase 0.82rem, letter-spacing 0.05em
+  - Primary: ink background → sage on hover
+  - Ghost: transparent with 1px border
+Labels/tags: 0.72rem uppercase, letter-spacing 0.12em, colored text on tinted bg, pill shape
+Section tags: small amber uppercase label above serif heading
+Dividers: <hr> with border-top: 1px solid rgba(28,25,23,0.10), no height
+List items: em-dash (—) as bullet, left-padded, muted dash color
+Links: sage color, underline with 3px offset
+
+─── NAVIGATION ───
+Logo: serif font, font-weight 500
+Links: 0.82rem uppercase, letter-spacing 0.06em, ink-muted default → ink on hover
+Active state: full ink color + 2px sage underline positioned below
+
+─── INTERACTION ───
+Hover transitions: 0.15–0.18s ease on color, opacity, transform
+Button hover: translateY(-1px)
+Accordions: chevron rotates 180° on open, body slides in (display toggle is fine)
+Page transitions: instant scroll to top on page switch
+
+─── ANIMATIONS (entry) ───
+Staggered fadeUp on hero elements:
+  @keyframes fadeUp { from { opacity:0; transform:translateY(20px) } to { opacity:1; transform:translateY(0) } }
+  Delay increments: 0s, 0.07s, 0.12s, 0.18s, 0.24s, 0.30s
+
+─── PHILOSOPHY ───
+- Warmth through typography and color, not imagery or decoration
+- Metrics and achievements should be visually prominent (bold within copy)
+- Available/open-to-work signal should appear early in the hero
+- Information density should feel considered, not sparse or overwhelming
+- No heavy card shadows, no purple gradients, no generic AI aesthetics
+- Single self-contained HTML file preferred (no build step, no dependencies)
+  unless the project is already in a framework
+
+Now here is my website content / source code:
+[PASTE YOUR CODE, REPO LINK, OR DESCRIBE YOUR SITE]
+
+Please redesign it applying all the above guidelines to my actual content.
