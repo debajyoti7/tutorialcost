@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings, Key, ExternalLink, Check, Trash2, Eye, EyeOff } from 'lucide-react';
+import { Settings, Key, ExternalLink, Check, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -52,11 +52,10 @@ const providerConfig = {
 };
 
 export default function SettingsDialog() {
-  const { apiKey, setApiKey, clearApiKey, hasApiKey, maskedKey, provider, setProvider } = useApiKey();
+  const { setApiKey, clearApiKey, hasApiKey, maskedKey, provider, setProvider } = useApiKey();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
-  const [showKey, setShowKey] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
   const config = providerConfig[provider];
@@ -103,7 +102,6 @@ export default function SettingsDialog() {
     setProvider(value as AiProvider);
     setInputValue('');
     setIsEditing(false);
-    setShowKey(false);
   };
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -111,7 +109,6 @@ export default function SettingsDialog() {
     if (!newOpen) {
       setInputValue('');
       setIsEditing(false);
-      setShowKey(false);
     }
   };
 
@@ -171,18 +168,9 @@ export default function SettingsDialog() {
               
               <div className="space-y-2">
                 <Label className="text-muted-foreground">Current key</Label>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 px-3 py-2 bg-muted rounded text-sm font-mono">
-                    {showKey ? apiKey : maskedKey}
-                  </code>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setShowKey(!showKey)}
-                  >
-                    {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                </div>
+                <code className="block px-3 py-2 bg-muted rounded text-sm font-mono">
+                  {maskedKey}
+                </code>
               </div>
 
               <div className="flex gap-2">
