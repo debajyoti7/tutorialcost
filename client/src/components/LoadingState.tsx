@@ -1,20 +1,30 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Brain, Zap, Search, FileText, XCircle } from "lucide-react";
+import { Loader2, Brain, Zap, Search, FileText, DollarSign, BarChart3, XCircle, CheckCircle2 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
+
+const STREAM_STEPS = [
+  { key: 'transcription', icon: FileText, text: "Fetching transcript" },
+  { key: 'experiments', icon: Brain, text: "Identifying experiments" },
+  { key: 'tools', icon: Search, text: "Identifying tools" },
+  { key: 'costs', icon: DollarSign, text: "Calculating costs" },
+  { key: 'summary', icon: BarChart3, text: "Building summary" },
+];
 
 interface LoadingStateProps {
   currentStep?: string;
   hasFailed?: boolean;
   failedAtStep?: number;
+  compact?: boolean;
+  currentStreamStep?: string;
 }
 
-export default function LoadingState({ currentStep, hasFailed = false, failedAtStep }: LoadingStateProps) {
+export default function LoadingState({ currentStep, hasFailed = false, failedAtStep, compact = false, currentStreamStep }: LoadingStateProps) {
   const [progress, setProgress] = useState(0);
   const [stepIndex, setStepIndex] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const steps = [
+  const classicSteps = [
     { icon: Search, text: "Extracting content from URL", duration: 2000 },
     { icon: FileText, text: "Transcribing audio content", duration: 3000 },
     { icon: Brain, text: "Analyzing with AI for experiments", duration: 4000 },
@@ -22,19 +32,21 @@ export default function LoadingState({ currentStep, hasFailed = false, failedAtS
   ];
 
   useEffect(() => {
+    if (compact) return;
+
     if (hasFailed) {
       if (intervalRef.current) clearInterval(intervalRef.current);
       if (failedAtStep !== undefined) {
         setStepIndex(failedAtStep);
-        const totalDuration = steps.reduce((sum, step) => sum + step.duration, 0);
+        const totalDuration = classicSteps.reduce((sum, step) => sum + step.duration, 0);
         let cumulativeDuration = 0;
-        for (let i = 0; i <= failedAtStep; i++) cumulativeDuration += steps[i].duration;
+        for (let i = 0; i <= failedAtStep; i++) cumulativeDuration += classicSteps[i].duration;
         setProgress(Math.min((cumulativeDuration / totalDuration) * 100, 100));
       }
       return;
     }
 
-    const totalDuration = steps.reduce((sum, step) => sum + step.duration, 0);
+    const totalDuration = classicSteps.reduce((sum, step) => sum + step.duration, 0);
     let elapsed = 0;
 
     intervalRef.current = setInterval(() => {
@@ -43,8 +55,8 @@ export default function LoadingState({ currentStep, hasFailed = false, failedAtS
       setProgress(newProgress);
 
       let cumulativeDuration = 0;
-      for (let i = 0; i < steps.length; i++) {
-        cumulativeDuration += steps[i].duration;
+      for (let i = 0; i < classicSteps.length; i++) {
+        cumulativeDuration += classicSteps[i].duration;
         if (elapsed <= cumulativeDuration) {
           setStepIndex(i);
           break;
@@ -59,9 +71,60 @@ export default function LoadingState({ currentStep, hasFailed = false, failedAtS
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [hasFailed, failedAtStep]);
+  }, [hasFailed, failedAtStep, compact]);
 
-  const CurrentIcon = steps[stepIndex]?.icon || Brain;
+  // ── Compact streaming-progress variant ──────────────────────────────────
+  if (compact) {
+    const activeIdx = STREAM_STEPS.findIndex(s => s.key === currentStreamStep);
+    const progressPct = activeIdx >= 0 ? Math.round(((activeIdx + 0.5) / STREAM_STEPS.length) * 100) : 10;
+
+    return (
+      <Card className="border border-border">
+        <CardContent className="pt-4 pb-4">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm font-medium text-muted-foreground">Analyzing…</span>
+              <span className="text-xs text-muted-foreground">{progressPct}%</span>
+            </div>
+            <Progress value={progressPct} className="h-1.5" data-testid="progress-streaming" />
+            <div className="flex items-center gap-2 flex-wrap">
+              {STREAM_STEPS.map((step, idx) => {
+                const Icon = step.icon;
+                const isActive = idx === activeIdx;
+                const isDone = idx < activeIdx;
+                return (
+                  <div
+                    key={step.key}
+                    className="flex items-center gap-1.5 text-xs transition-colors"
+                    style={{
+                      color: isDone
+                        ? "hsl(var(--sage))"
+                        : isActive
+                        ? "hsl(var(--foreground))"
+                        : "hsl(var(--muted-foreground))",
+                    }}
+                    data-testid={`stream-step-${step.key}`}
+                  >
+                    {isDone ? (
+                      <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
+                    ) : isActive ? (
+                      <Loader2 className="w-3.5 h-3.5 flex-shrink-0 animate-spin" />
+                    ) : (
+                      <Icon className="w-3.5 h-3.5 flex-shrink-0 opacity-40" />
+                    )}
+                    <span className={isActive ? "font-medium" : ""}>{step.text}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // ── Classic full-screen loading variant ──────────────────────────────────
+  const CurrentIcon = classicSteps[stepIndex]?.icon || Brain;
 
   return (
     <div className="w-full max-w-editorial mx-auto animate-fade-up">
@@ -72,10 +135,7 @@ export default function LoadingState({ currentStep, hasFailed = false, failedAtS
               className="flex items-center justify-center w-16 h-16 rounded-md"
               style={{ background: "hsl(var(--sage-light))" }}
             >
-              <CurrentIcon
-                className="w-8 h-8"
-                style={{ color: "hsl(var(--sage))" }}
-              />
+              <CurrentIcon className="w-8 h-8" style={{ color: "hsl(var(--sage))" }} />
             </div>
           </div>
           <CardTitle
@@ -103,7 +163,7 @@ export default function LoadingState({ currentStep, hasFailed = false, failedAtS
           </div>
 
           <div className="space-y-2">
-            {steps.map((step, index) => {
+            {classicSteps.map((step, index) => {
               const Icon = step.icon;
               const isFailed = hasFailed && failedAtStep === index;
               const isActive = !hasFailed && index === stepIndex;

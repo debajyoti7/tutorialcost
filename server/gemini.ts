@@ -114,15 +114,16 @@ export interface LearningRef {
   insight: string;
 }
 
-export async function analyzeContentForLLMExperiments(
-  transcript: string,
-  title: string,
-  userApiKey?: string,
-  learnings?: LearningRef[],
-): Promise<AnalysisResult & { learningIdsUsed: string[] }> {
-  try {
-    const client = getClient(userApiKey);
-    let systemPrompt = `You are an expert AI researcher analyzing content to identify LLM experiments and tools mentioned.
+export interface ExperimentsResult {
+  experiments: AnalysisResult['experiments'];
+  learningIdsUsed: string[];
+}
+
+export interface ToolsResult {
+  tools: AnalysisResult['tools'];
+}
+
+const SYSTEM_PROMPT_BASE = `You are an expert AI researcher analyzing content to identify LLM experiments and tools mentioned.
 
 ═══ CRITICAL: YOUR ROLE ═══
 ✓ YOU IDENTIFY tools and experiments (qualitative analysis)
@@ -194,117 +195,165 @@ Common tier patterns:
 
 Return valid JSON matching the schema.`;
 
-    const learningIdsUsed: string[] = [];
-    if (learnings && learnings.length > 0) {
-      systemPrompt += `\n\n═══ LEARNED CORRECTIONS FROM USER FEEDBACK ═══\n`;
-      for (const l of learnings) {
-        systemPrompt += `• ${l.insight}\n`;
-        learningIdsUsed.push(l.id);
-      }
-    }
+export async function identifyExperiments(
+  transcript: string,
+  title: string,
+  userApiKey?: string,
+  learnings?: LearningRef[],
+): Promise<ExperimentsResult> {
+  const client = getClient(userApiKey);
 
-    const prompt = `Content Title: ${title}
+  let systemPrompt = SYSTEM_PROMPT_BASE;
+  const learningIdsUsed: string[] = [];
+  if (learnings && learnings.length > 0) {
+    systemPrompt += `\n\n═══ LEARNED CORRECTIONS FROM USER FEEDBACK ═══\n`;
+    for (const l of learnings) {
+      systemPrompt += `• ${l.insight}\n`;
+      learningIdsUsed.push(l.id);
+    }
+  }
+
+  const prompt = `Content Title: ${title}
 
 Transcript:
 ${transcript.slice(0, 15000)} ${transcript.length > 15000 ? "...[truncated]" : ""}
 
-Analyze this content and identify LLM experiments and tools as specified.`;
+Identify only the LLM EXPERIMENTS from this content. Return a JSON object with an "experiments" array.`;
 
-    const response = await withRetry(
-      () => client.models.generateContent({
-        model: "gemini-2.5-flash",
-        config: {
-          systemInstruction: systemPrompt,
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: "object",
-            properties: {
-              experiments: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    id: { type: "string" },
-                    title: { type: "string" },
-                    description: { type: "string" },
-                    timestamp: { type: "string" },
-                    tools: { type: "array", items: { type: "string" } },
-                    complexity: { type: "string" },
-                    usagePattern: { type: "string" },
-                  },
-                  required: [
-                    "id",
-                    "title",
-                    "description",
-                    "timestamp",
-                    "tools",
-                    "complexity",
-                    "usagePattern",
-                  ],
-                },
-              },
-              tools: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    id: { type: "string" },
-                    name: { type: "string" },
-                    category: { type: "string" },
-                    description: { type: "string" },
-                    mentioned: { type: "array", items: { type: "string" } },
-                    suggestedTier: { type: "string" },
-                    deploymentType: { type: "string" },
-                    confidence: { type: "string" },
-                  },
-                  required: [
-                    "id",
-                    "name",
-                    "category",
-                    "description",
-                    "mentioned",
-                    "deploymentType",
-                    "confidence",
-                  ],
-                },
-              },
-              summary: {
+  const response = await withRetry(
+    () => client.models.generateContent({
+      model: "gemini-2.5-flash",
+      config: {
+        systemInstruction: systemPrompt,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "object",
+          properties: {
+            experiments: {
+              type: "array",
+              items: {
                 type: "object",
                 properties: {
-                  totalExperiments: { type: "number" },
-                  totalToolsRequired: { type: "number" },
-                  implementationTimeEstimate: { type: "string" },
-                  difficultyLevel: { type: "string" },
+                  id: { type: "string" },
+                  title: { type: "string" },
+                  description: { type: "string" },
+                  timestamp: { type: "string" },
+                  tools: { type: "array", items: { type: "string" } },
+                  complexity: { type: "string" },
+                  usagePattern: { type: "string" },
                 },
-                required: [
-                  "totalExperiments",
-                  "totalToolsRequired",
-                  "implementationTimeEstimate",
-                  "difficultyLevel",
-                ],
+                required: ["id", "title", "description", "timestamp", "tools", "complexity", "usagePattern"],
               },
             },
-            required: ["experiments", "tools", "summary"],
           },
+          required: ["experiments"],
         },
-        contents: prompt,
-      }),
-      { operationName: 'Content analysis' }
-    );
+      },
+      contents: prompt,
+    }),
+    { operationName: 'Identify experiments' }
+  );
 
-    const rawJson = response.text;
-    console.log(`Gemini analysis response: ${rawJson?.slice(0, 500)}...`);
+  const rawJson = response.text;
+  if (!rawJson) throw new Error("Empty response from Gemini (experiments)");
+  const data = JSON.parse(rawJson);
+  return { experiments: data.experiments || [], learningIdsUsed };
+}
 
-    if (rawJson) {
-      const data: AnalysisResult = JSON.parse(rawJson);
-      return { ...data, learningIdsUsed };
-    } else {
-      throw new Error("Empty response from Gemini");
-    }
+export async function identifyTools(
+  transcript: string,
+  experiments: AnalysisResult['experiments'],
+  userApiKey?: string,
+): Promise<ToolsResult> {
+  const client = getClient(userApiKey);
+
+  const experimentContext = experiments.map(e => `- ${e.title}: ${e.description} (tools: ${e.tools.join(', ')})`).join('\n');
+
+  const prompt = `Content Transcript:
+${transcript.slice(0, 15000)} ${transcript.length > 15000 ? "...[truncated]" : ""}
+
+Experiments already identified:
+${experimentContext}
+
+Identify all TOOLS required for these experiments. Return a JSON object with a "tools" array and a "summary" object.`;
+
+  const response = await withRetry(
+    () => client.models.generateContent({
+      model: "gemini-2.5-flash",
+      config: {
+        systemInstruction: SYSTEM_PROMPT_BASE,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "object",
+          properties: {
+            tools: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  id: { type: "string" },
+                  name: { type: "string" },
+                  category: { type: "string" },
+                  description: { type: "string" },
+                  mentioned: { type: "array", items: { type: "string" } },
+                  suggestedTier: { type: "string" },
+                  deploymentType: { type: "string" },
+                  confidence: { type: "string" },
+                },
+                required: ["id", "name", "category", "description", "mentioned", "deploymentType", "confidence"],
+              },
+            },
+            summary: {
+              type: "object",
+              properties: {
+                totalExperiments: { type: "number" },
+                totalToolsRequired: { type: "number" },
+                implementationTimeEstimate: { type: "string" },
+                difficultyLevel: { type: "string" },
+              },
+              required: ["totalExperiments", "totalToolsRequired", "implementationTimeEstimate", "difficultyLevel"],
+            },
+          },
+          required: ["tools", "summary"],
+        },
+      },
+      contents: prompt,
+    }),
+    { operationName: 'Identify tools' }
+  );
+
+  const rawJson = response.text;
+  if (!rawJson) throw new Error("Empty response from Gemini (tools)");
+  const data = JSON.parse(rawJson);
+  return { tools: data.tools || [] };
+}
+
+export async function analyzeContentForLLMExperiments(
+  transcript: string,
+  title: string,
+  userApiKey?: string,
+  learnings?: LearningRef[],
+): Promise<AnalysisResult & { learningIdsUsed: string[] }> {
+  try {
+    const expResult = await identifyExperiments(transcript, title, userApiKey, learnings);
+    const toolsResult = await identifyTools(transcript, expResult.experiments, userApiKey);
+
+    const summary: AnalysisResult['summary'] = {
+      totalExperiments: expResult.experiments.length,
+      totalToolsRequired: toolsResult.tools.length,
+      implementationTimeEstimate: "2-4 weeks",
+      difficultyLevel: "Medium",
+    };
+
+    return {
+      experiments: expResult.experiments,
+      tools: toolsResult.tools,
+      summary,
+      learningIdsUsed: expResult.learningIdsUsed,
+    };
   } catch (error) {
     console.error("Gemini analysis failed:", error);
-    
-    // Check if this is a quota error and throw specific error type
+
     const errorMessage = error instanceof Error ? error.message.toLowerCase() : '';
     const isQuotaError = error instanceof Error && (
       errorMessage.includes('429') ||
@@ -313,11 +362,11 @@ Analyze this content and identify LLM experiments and tools as specified.`;
       errorMessage.includes('rate limit') ||
       errorMessage.includes('too many requests')
     );
-    
+
     if (isQuotaError) {
       throw new QuotaExceededError('API quota exceeded. Please try again in a few minutes.');
     }
-    
+
     throw new Error(
       `Failed to analyze content: ${error instanceof Error ? error.message : "Unknown error"}`,
     );

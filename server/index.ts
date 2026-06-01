@@ -77,7 +77,10 @@ app.use((req, res, next) => {
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+      // Redact apiKey query param from logged URL to avoid leaking BYOK keys
+      const safeQuery = req.url.replace(/([?&]apiKey=)[^&]*/g, '$1[REDACTED]');
+      const safeUrl = safeQuery !== req.url ? safeQuery : path;
+      let logLine = `${req.method} ${safeUrl} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
         const safeBody = { ...capturedJsonResponse };
         for (const key of SENSITIVE_HEADERS) {

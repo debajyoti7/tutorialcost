@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, jsonb, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, jsonb, timestamp, boolean, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -103,6 +103,64 @@ export const toolDatabase = pgTable("tool_database", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   pricingUpdatedAt: timestamp("pricing_updated_at").defaultNow().notNull(),
 });
+
+// Pipeline runs table — stores per-step results for streaming analysis
+// Enables retry-from-checkpoint: completed steps are replayed from DB, not re-run
+export const pipelineRuns = pgTable("pipeline_runs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  url: text("url").notNull(),
+  // Status watermark: pending → transcribed → experiments_done → tools_done → costs_done → completed | failed
+  status: text("status").notNull().default('pending'),
+  // Step 1: transcript + content metadata
+  transcriptionData: jsonb("transcription_data").$type<{
+    transcript: string;
+    transcriptSource: string;
+    title: string;
+    duration: string;
+    platform: string;
+    wordCount: number;
+  }>(),
+  // Step 2: raw AI experiment output
+  experimentsData: jsonb("experiments_data").$type<{
+    experiments: {
+      id: string; title: string; description: string; timestamp: string;
+      tools: string[]; complexity: string; usagePattern?: string;
+    }[];
+    learningIdsUsed: string[];
+  }>(),
+  // Step 3: raw AI tool output
+  toolsData: jsonb("tools_data").$type<{
+    tools: {
+      id: string; name: string; category: string; description: string;
+      mentioned: string[]; suggestedTier?: string;
+      deploymentType?: string; confidence?: string;
+    }[];
+  }>(),
+  // Step 4: cost-enriched experiments, detailed tools, computed summary
+  costsData: jsonb("costs_data").$type<{
+    experimentsWithCosts: any[];
+    detailedTools: any[];
+    enhancedSummary: any;
+  }>(),
+  // Last error message (if status === 'failed')
+  error: text("error"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  // Auto-cleanup after 2 hours
+  expiresAt: timestamp("expires_at").notNull(),
+}, (t) => [
+  index("pipeline_runs_url_idx").on(t.url),
+  index("pipeline_runs_expires_at_idx").on(t.expiresAt),
+]);
+
+export const insertPipelineRunSchema = createInsertSchema(pipelineRuns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertPipelineRun = z.infer<typeof insertPipelineRunSchema>;
+export type PipelineRun = typeof pipelineRuns.$inferSelect;
 
 export const insertAnalysisSchema = createInsertSchema(analyses).omit({
   id: true,

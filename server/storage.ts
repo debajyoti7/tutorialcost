@@ -1,9 +1,11 @@
-import { type User, type InsertUser, type Analysis, type InsertAnalysis, type Tool, type InsertTool, type Feedback, type InsertFeedback, type Learning, type InsertLearning } from "@shared/schema";
+import { type User, type InsertUser, type Analysis, type InsertAnalysis, type Tool, type InsertTool, type Feedback, type InsertFeedback, type Learning, type InsertLearning, type PipelineRun } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { analyses, toolDatabase, users, feedback, learnings } from "@shared/schema";
-import { eq, sql, desc } from "drizzle-orm";
+import { analyses, toolDatabase, users, feedback, learnings, pipelineRuns } from "@shared/schema";
+import { eq, sql, desc, and, gt } from "drizzle-orm";
+
+const PIPELINE_RUN_TTL_HOURS = 2;
 
 // Storage interface for the content analyzer
 export interface IStorage {
@@ -40,6 +42,18 @@ export interface IStorage {
   // Learning methods
   createLearning(learningData: InsertLearning): Promise<Learning>;
   getActiveLearnings(limit: number): Promise<Learning[]>;
+
+  // Pipeline run methods — checkpointed streaming analysis
+  createPipelineRun(url: string): Promise<PipelineRun>;
+  getActivePipelineRunByUrl(url: string): Promise<PipelineRun | undefined>;
+  updatePipelineRun(id: string, updates: {
+    status?: string;
+    transcriptionData?: PipelineRun['transcriptionData'];
+    experimentsData?: PipelineRun['experimentsData'];
+    toolsData?: PipelineRun['toolsData'];
+    costsData?: PipelineRun['costsData'];
+    error?: string;
+  }): Promise<PipelineRun | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -48,6 +62,7 @@ export class MemStorage implements IStorage {
   private tools: Map<string, Tool>;
   private feedbacks: Map<string, Feedback>;
   private learningsMap: Map<string, Learning>;
+  private pipelineRunsMap: Map<string, PipelineRun>;
 
   constructor() {
     this.users = new Map();
@@ -55,6 +70,7 @@ export class MemStorage implements IStorage {
     this.tools = new Map();
     this.feedbacks = new Map();
     this.learningsMap = new Map();
+    this.pipelineRunsMap = new Map();
     
     // Initialize with some common tools
     this.initializeToolDatabase();
@@ -639,6 +655,48 @@ export class MemStorage implements IStorage {
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
       .slice(0, limit);
   }
+
+  async createPipelineRun(url: string): Promise<PipelineRun> {
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + PIPELINE_RUN_TTL_HOURS * 60 * 60 * 1000);
+    const run: PipelineRun = {
+      id: randomUUID(),
+      url,
+      status: 'pending',
+      transcriptionData: null,
+      experimentsData: null,
+      toolsData: null,
+      costsData: null,
+      error: null,
+      createdAt: now,
+      updatedAt: now,
+      expiresAt,
+    };
+    this.pipelineRunsMap.set(run.id, run);
+    return run;
+  }
+
+  async getActivePipelineRunByUrl(url: string): Promise<PipelineRun | undefined> {
+    const now = new Date();
+    return Array.from(this.pipelineRunsMap.values()).find(
+      r => r.url === url && r.expiresAt > now && r.status !== 'completed'
+    );
+  }
+
+  async updatePipelineRun(id: string, updates: {
+    status?: string;
+    transcriptionData?: PipelineRun['transcriptionData'];
+    experimentsData?: PipelineRun['experimentsData'];
+    toolsData?: PipelineRun['toolsData'];
+    costsData?: PipelineRun['costsData'];
+    error?: string;
+  }): Promise<PipelineRun | undefined> {
+    const run = this.pipelineRunsMap.get(id);
+    if (!run) return undefined;
+    const updated: PipelineRun = { ...run, ...updates, updatedAt: new Date() };
+    this.pipelineRunsMap.set(id, updated);
+    return updated;
+  }
 }
 
 // Database storage implementation using Drizzle ORM
@@ -1077,6 +1135,47 @@ export class DbStorage implements IStorage {
       .where(eq(learnings.isActive, true))
       .orderBy(desc(learnings.createdAt))
       .limit(limit);
+  }
+
+  async createPipelineRun(url: string): Promise<PipelineRun> {
+    const expiresAt = new Date(Date.now() + PIPELINE_RUN_TTL_HOURS * 60 * 60 * 1000);
+    const result = await this.db
+      .insert(pipelineRuns)
+      .values({ url, status: 'pending', expiresAt })
+      .returning();
+    return result[0];
+  }
+
+  async getActivePipelineRunByUrl(url: string): Promise<PipelineRun | undefined> {
+    const result = await this.db
+      .select()
+      .from(pipelineRuns)
+      .where(
+        and(
+          eq(pipelineRuns.url, url),
+          gt(pipelineRuns.expiresAt, new Date()),
+          sql`${pipelineRuns.status} != 'completed'`
+        )
+      )
+      .orderBy(desc(pipelineRuns.createdAt))
+      .limit(1);
+    return result[0];
+  }
+
+  async updatePipelineRun(id: string, updates: {
+    status?: string;
+    transcriptionData?: PipelineRun['transcriptionData'];
+    experimentsData?: PipelineRun['experimentsData'];
+    toolsData?: PipelineRun['toolsData'];
+    costsData?: PipelineRun['costsData'];
+    error?: string;
+  }): Promise<PipelineRun | undefined> {
+    const result = await this.db
+      .update(pipelineRuns)
+      .set({ ...updates, updatedAt: new Date() } as any)
+      .where(eq(pipelineRuns.id, id))
+      .returning();
+    return result[0];
   }
 }
 

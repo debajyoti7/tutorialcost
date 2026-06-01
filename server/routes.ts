@@ -2,8 +2,9 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { extractYouTubeContent, extractPodcastContent, detectPlatform, validateUrl } from "./contentExtractor";
-import { analyzeContentForLLMExperiments, QuotaExceededError } from "./gemini";
-import { analyzeContentWithOpenRouter } from "./openrouter";
+import { analyzeContentForLLMExperiments, identifyExperiments, identifyTools, QuotaExceededError } from "./gemini";
+import { analyzeContentWithOpenRouter, identifyExperimentsWithOpenRouter, identifyToolsWithOpenRouter } from "./openrouter";
+import { transcribeWithUseTranscribeIO } from "./transcribeio";
 import { insertAnalysisSchema, insertFeedbackSchema } from "@shared/schema";
 import { generateAndStoreLearning } from "./learnings";
 import { z } from "zod";
@@ -653,8 +654,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         hasFreeToolOption
       );
       
+      const avgComplexity = experiments.length > 0 ? experiments[0].complexity : 'Medium';
       const enhancedSummary = {
-        ...aiAnalysis.summary,
+        totalExperiments: experiments.length,
+        totalToolsRequired: detailedTools.length,
+        implementationTimeEstimate: "2-4 weeks",
+        difficultyLevel: normalizeDifficultyLevel(avgComplexity) as any,
         toolSubscriptionCostMin: toolSubscriptionMin,
         toolSubscriptionCostMax: toolSubscriptionMax,
         infrastructureCostMin: infrastructureCosts.min,
@@ -744,6 +749,464 @@ export async function registerRoutes(app: Express): Promise<Server> {
         details: 'An unexpected error occurred. Please try again.',
         processingTime
       });
+    }
+  });
+
+  // ── Shared helper: build detailed tools + costs from raw AI output ──────────
+  type AiToolRaw = {
+    id: string; name: string; category: string; description: string;
+    mentioned: string[]; suggestedTier?: string;
+    deploymentType: 'cloud' | 'self-hosted' | 'hybrid' | 'api-only';
+    confidence: 'high' | 'medium' | 'low';
+  };
+  type AiExperimentRaw = {
+    id: string; title: string; description: string; timestamp: string;
+    tools: string[]; complexity: string; usagePattern?: string;
+  };
+
+  async function buildDetailedResults(
+    aiExperiments: AiExperimentRaw[],
+    aiTools: AiToolRaw[],
+    aiSummary?: { totalExperiments: number; totalToolsRequired: number; implementationTimeEstimate: string; difficultyLevel: string }
+  ) {
+    const allDbTools = await storage.getAllTools();
+    const detailedTools: any[] = [];
+
+    for (const aiTool of aiTools) {
+      const dbTool = allDbTools.find(t =>
+        t.name.toLowerCase().includes(aiTool.name.toLowerCase()) ||
+        aiTool.name.toLowerCase().includes(t.name.toLowerCase()) ||
+        t.id === aiTool.id
+      );
+
+      if (dbTool) {
+        let selectedTier = dbTool.pricingTiers[0];
+        let tierMatched = false;
+        const freeTier = dbTool.pricingTiers.find(tier => tier.monthlyMin === 0);
+        const suggestedTierText = aiTool.suggestedTier?.toLowerCase() || "";
+
+        if (suggestedTierText) {
+          const matchedTier = dbTool.pricingTiers.find(tier =>
+            suggestedTierText.includes(tier.tier.toLowerCase()) ||
+            (suggestedTierText.includes('free') && tier.monthlyMin === 0) ||
+            (suggestedTierText.includes('self-hosted') && tier.tier.toLowerCase().includes('self-hosted')) ||
+            (suggestedTierText.includes('starter') && tier.tier.toLowerCase().includes('starter')) ||
+            (suggestedTierText.includes('pro') && tier.tier.toLowerCase().includes('pro')) ||
+            (suggestedTierText.includes('cloud') && tier.tier.toLowerCase().includes('cloud'))
+          );
+          if (matchedTier) { selectedTier = matchedTier; tierMatched = true; }
+        }
+
+        if (!tierMatched && !suggestedTierText) {
+          const avgComplexity = aiExperiments.length > 0 ? aiExperiments[0].complexity : "Medium";
+          if (avgComplexity === "Low" && freeTier) {
+            selectedTier = freeTier;
+          } else if (avgComplexity === "High") {
+            selectedTier = dbTool.pricingTiers[dbTool.pricingTiers.length - 1];
+          } else {
+            const paidTier = dbTool.pricingTiers.find(t => t.monthlyMin > 0 && t.monthlyMin < 100);
+            selectedTier = paidTier || dbTool.pricingTiers[Math.floor(dbTool.pricingTiers.length / 2)];
+          }
+        }
+
+        detailedTools.push({
+          id: dbTool.id, name: dbTool.name, category: dbTool.category, description: dbTool.description,
+          pricing: {
+            free: !!freeTier,
+            monthlyMin: selectedTier?.monthlyMin,
+            monthlyMax: selectedTier?.monthlyMax,
+            usage: selectedTier?.usage,
+            features: selectedTier?.features || [],
+            priceType: selectedTier?.priceType,
+            tierName: selectedTier?.tier,
+            pricingSource: "database",
+            allTiers: dbTool.pricingTiers.map(t => ({ tier: t.tier, monthlyMin: t.monthlyMin, monthlyMax: t.monthlyMax, priceType: t.priceType, usage: t.usage }))
+          },
+          difficulty: dbTool.difficulty,
+          timeToImplement: dbTool.avgImplementationTime,
+          url: dbTool.baseUrl,
+          mentioned: aiTool.mentioned,
+          suggestedContext: aiTool.suggestedTier,
+          deploymentType: aiTool.deploymentType,
+          confidence: aiTool.confidence
+        });
+      } else {
+        const parsedPricing = parsePricingFromContext(aiTool.suggestedTier);
+        detailedTools.push({
+          id: aiTool.id, name: aiTool.name, category: aiTool.category, description: aiTool.description,
+          pricing: {
+            free: parsedPricing.isFree,
+            monthlyMin: parsedPricing.monthlyMin,
+            monthlyMax: parsedPricing.monthlyMax,
+            usage: "AI Estimated",
+            features: ["AI-identified tool"],
+            priceType: parsedPricing.priceType,
+            pricingSource: "ai-estimated"
+          },
+          difficulty: 'Intermediate',
+          timeToImplement: "2-4 hours",
+          url: `https://google.com/search?q=${encodeURIComponent(aiTool.name)}`,
+          mentioned: aiTool.mentioned,
+          suggestedContext: aiTool.suggestedTier,
+          deploymentType: aiTool.deploymentType,
+          confidence: aiTool.confidence
+        });
+      }
+    }
+
+    const toolPricingMap = new Map<string, { monthlyMin: number; monthlyMax: number; free: boolean }>();
+    for (const tool of detailedTools) {
+      toolPricingMap.set(tool.id, {
+        monthlyMin: tool.pricing.monthlyMin || 0,
+        monthlyMax: tool.pricing.monthlyMax || tool.pricing.monthlyMin || 0,
+        free: tool.pricing.free
+      });
+    }
+
+    const experimentsWithCosts = aiExperiments.map(exp => {
+      let expCostMin = 0, expCostMax = 0;
+      for (const toolId of exp.tools) {
+        const tp = toolPricingMap.get(toolId);
+        if (tp) { expCostMin += tp.monthlyMin; expCostMax += tp.monthlyMax; }
+      }
+      return { ...exp, estimatedCostMin: expCostMin, estimatedCostMax: expCostMax };
+    });
+
+    let toolSubscriptionMin = 0, toolSubscriptionMax = 0;
+    for (const tool of detailedTools) {
+      toolSubscriptionMin += tool.pricing.monthlyMin || 0;
+      toolSubscriptionMax += tool.pricing.monthlyMax || tool.pricing.monthlyMin || 0;
+    }
+
+    const infrastructureCosts = estimateInfrastructureCosts(detailedTools);
+    const totalCostMin = toolSubscriptionMin + infrastructureCosts.min;
+    const totalCostMax = toolSubscriptionMax + infrastructureCosts.max;
+    const hasFreeToolOption = detailedTools.some(t => t.pricing.free);
+    const costClassification = getCostClassification(totalCostMin, totalCostMax, hasFreeToolOption);
+
+    const enhancedSummary = {
+      totalExperiments: aiExperiments.length,
+      totalToolsRequired: detailedTools.length,
+      implementationTimeEstimate: aiSummary?.implementationTimeEstimate || "2-4 weeks",
+      difficultyLevel: (normalizeDifficultyLevel(aiSummary?.difficultyLevel || 'Medium') as any),
+      toolSubscriptionCostMin: toolSubscriptionMin,
+      toolSubscriptionCostMax: toolSubscriptionMax,
+      infrastructureCostMin: infrastructureCosts.min,
+      infrastructureCostMax: infrastructureCosts.max,
+      infrastructureBreakdown: infrastructureCosts.breakdown,
+      totalCostMin,
+      totalCostMax,
+      costClassification: costClassification.class,
+      costClassificationLabel: costClassification.label
+    };
+
+    return { detailedTools, experimentsWithCosts, enhancedSummary };
+  }
+
+  // GET /api/analyze/stream - SSE streaming analysis endpoint
+  app.get("/api/analyze/stream", analyzeRateLimiter, async (req, res) => {
+    const startTime = Date.now();
+
+    const url = req.query.url as string;
+    const provider = (req.query.provider as string) || 'gemini';
+    const apiKey = req.query.apiKey as string | undefined;
+
+    // SSE headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    const sendEvent = (data: object) => {
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    };
+
+    const sendError = (message: string) => {
+      sendEvent({ step: 'error', message });
+      res.end();
+    };
+
+    try {
+      if (!url) { sendError('URL is required'); return; }
+
+      let parsedUrl: URL;
+      try { parsedUrl = new URL(url); } catch { sendError('Invalid URL'); return; }
+
+      const urlValidation = validateUrl(url);
+      if (!urlValidation.isValid) { sendError(urlValidation.error || 'Invalid URL'); return; }
+
+      // Auth check
+      if (provider === 'openrouter' && !apiKey) {
+        sendError('OpenRouter API key required. Please add your key in Settings.');
+        return;
+      }
+      if (provider !== 'openrouter' && !apiKey) {
+        const user = req.user as any;
+        const isUserAuthenticated = req.isAuthenticated?.() && user?.claims?.sub;
+        const now = Math.floor(Date.now() / 1000);
+        const isTokenValid = user?.expires_at && now <= user.expires_at;
+        if (!isUserAuthenticated || !isTokenValid) {
+          sendError('Sign in required. Please sign in or add your own API key in Settings.');
+          return;
+        }
+      }
+
+      // ── Cache check: completed analysis already saved ────────────────────
+      const existingAnalyses = await storage.getAnalysesByUrl(url);
+      if (existingAnalyses.length > 0) {
+        const latest = existingAnalyses[0];
+        console.log(`Streaming cached analysis for ${url}`);
+        await storage.incrementViewCount(latest.id);
+
+        const contentInfo = { title: latest.title, duration: latest.duration, platform: latest.platform, url: latest.url, transcriptSource: latest.transcriptSource };
+
+        const cachedTranscript = latest.transcript || '';
+        const cachedWordCount = cachedTranscript ? cachedTranscript.split(/\s+/).length : 0;
+        const cachedPreview = cachedTranscript.slice(0, 2000);
+        sendEvent({ step: 'transcription', source: latest.transcriptSource || 'youtube', wordCount: cachedWordCount, transcript: cachedPreview });
+        await new Promise(r => setTimeout(r, 80));
+        sendEvent({ step: 'experiments', experiments: latest.experiments });
+        await new Promise(r => setTimeout(r, 80));
+        sendEvent({ step: 'tools', tools: latest.tools });
+        await new Promise(r => setTimeout(r, 80));
+        sendEvent({ step: 'costs', experiments: latest.experiments, tools: latest.tools });
+        await new Promise(r => setTimeout(r, 80));
+        sendEvent({ step: 'summary', summary: latest.summary, id: latest.id, contentInfo });
+        await new Promise(r => setTimeout(r, 80));
+        sendEvent({ step: 'done' });
+        res.end();
+        return;
+      }
+
+      // ── Pipeline run: get or create a checkpoint record ──────────────────
+      // Allows retry to skip already-completed steps (replayed instantly from DB)
+      let pipelineRun = await storage.getActivePipelineRunByUrl(url);
+      if (!pipelineRun) {
+        pipelineRun = await storage.createPipelineRun(url);
+        console.log(`Created pipeline run ${pipelineRun.id} for ${url}`);
+      } else {
+        console.log(`Resuming pipeline run ${pipelineRun.id} (status: ${pipelineRun.status}) for ${url}`);
+      }
+
+      // ── Step 1: Transcription ────────────────────────────────────────────
+      let contentInfo: any;
+
+      if (pipelineRun.transcriptionData) {
+        // Replay from DB — step already done on a previous attempt
+        const td = pipelineRun.transcriptionData;
+        contentInfo = {
+          title: td.title,
+          duration: td.duration,
+          platform: td.platform,
+          transcript: td.transcript,
+          transcriptSource: td.transcriptSource,
+        };
+        const cachedPreview = td.transcript.slice(0, 2000);
+        console.log(`Step 1 replayed from DB (${td.transcriptSource}, ${td.wordCount} words)`);
+        sendEvent({ step: 'transcription', source: td.transcriptSource, wordCount: td.wordCount, transcript: cachedPreview });
+      } else {
+        // Run transcription fresh
+        const platform = detectPlatform(url);
+        let transcriptSource: string = 'youtube';
+
+        if (platform === 'YouTube') {
+          const videoIdMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/);
+          const videoId = videoIdMatch?.[1];
+
+          let transcript = '';
+          let gotTranscript = false;
+
+          if (videoId) {
+            try {
+              console.log('Trying usetranscribe.io first...');
+              const result = await transcribeWithUseTranscribeIO(videoId);
+              transcript = result.transcript;
+              transcriptSource = result.source;
+              gotTranscript = true;
+              console.log(`usetranscribe.io succeeded (${transcriptSource})`);
+            } catch (err) {
+              console.log('usetranscribe.io failed, falling back to existing pipeline:', err instanceof Error ? err.message : err);
+            }
+          }
+
+          if (!gotTranscript) {
+            contentInfo = await extractYouTubeContent(url, provider === 'openrouter' ? undefined : apiKey);
+            transcriptSource = contentInfo.transcriptSource;
+          } else {
+            try {
+              const fallback = await extractYouTubeContent(url, provider === 'openrouter' ? undefined : apiKey);
+              contentInfo = { ...fallback, transcript, transcriptSource };
+            } catch {
+              contentInfo = { title: 'YouTube Video', duration: '0:00', platform: 'YouTube', transcript, transcriptSource, hasTranscript: true, hasDescription: false };
+            }
+            contentInfo.transcript = transcript;
+            contentInfo.transcriptSource = transcriptSource;
+          }
+        } else if (platform === 'Podcast') {
+          contentInfo = await extractPodcastContent(url);
+          transcriptSource = contentInfo.transcriptSource;
+        } else {
+          sendError('Unsupported platform. Please use a YouTube URL.');
+          return;
+        }
+
+        const wordCount = contentInfo.transcript ? contentInfo.transcript.split(/\s+/).length : 0;
+        // Checkpoint step 1 in DB
+        pipelineRun = await storage.updatePipelineRun(pipelineRun.id, {
+          status: 'transcribed',
+          transcriptionData: {
+            transcript: contentInfo.transcript || '',
+            transcriptSource: contentInfo.transcriptSource,
+            title: contentInfo.title,
+            duration: contentInfo.duration,
+            platform: contentInfo.platform,
+            wordCount,
+          },
+        }) ?? pipelineRun;
+
+        const TRANSCRIPT_PREVIEW_CHARS = 2000;
+        const transcriptPreview = contentInfo.transcript ? contentInfo.transcript.slice(0, TRANSCRIPT_PREVIEW_CHARS) : '';
+        sendEvent({ step: 'transcription', source: contentInfo.transcriptSource, wordCount, transcript: transcriptPreview });
+      }
+
+      // ── Step 2: Experiments ──────────────────────────────────────────────
+      let expResult: { experiments: any[]; learningIdsUsed: string[] };
+
+      if (pipelineRun.experimentsData) {
+        // Replay from DB
+        expResult = {
+          experiments: pipelineRun.experimentsData.experiments,
+          learningIdsUsed: pipelineRun.experimentsData.learningIdsUsed,
+        };
+        console.log(`Step 2 replayed from DB (${expResult.experiments.length} experiments)`);
+        sendEvent({ step: 'experiments', experiments: expResult.experiments });
+      } else {
+        const activeLearnings = await storage.getActiveLearnings(10);
+        const learningRefs = activeLearnings.map(l => ({ id: l.id, insight: l.insight }));
+
+        if (provider === 'openrouter' && apiKey) {
+          expResult = await identifyExperimentsWithOpenRouter(contentInfo.transcript, contentInfo.title, apiKey, learningRefs);
+        } else {
+          expResult = await identifyExperiments(contentInfo.transcript, contentInfo.title, apiKey, learningRefs);
+        }
+
+        if (expResult.experiments.length === 0) {
+          await storage.updatePipelineRun(pipelineRun.id, { status: 'failed', error: 'No LLM experiments found' });
+          sendError('No LLM experiments found in this content. The video may not contain AI tutorial content.');
+          return;
+        }
+
+        // Checkpoint step 2 in DB
+        pipelineRun = await storage.updatePipelineRun(pipelineRun.id, {
+          status: 'experiments_done',
+          experimentsData: {
+            experiments: expResult.experiments,
+            learningIdsUsed: expResult.learningIdsUsed || [],
+          },
+        }) ?? pipelineRun;
+
+        sendEvent({ step: 'experiments', experiments: expResult.experiments });
+      }
+
+      // ── Step 3: Tools ────────────────────────────────────────────────────
+      let toolsResult: { tools: any[] };
+
+      if (pipelineRun.toolsData) {
+        // Replay from DB
+        toolsResult = { tools: pipelineRun.toolsData.tools };
+        console.log(`Step 3 replayed from DB (${toolsResult.tools.length} tools)`);
+        sendEvent({ step: 'tools', tools: toolsResult.tools });
+      } else {
+        if (provider === 'openrouter' && apiKey) {
+          toolsResult = await identifyToolsWithOpenRouter(contentInfo.transcript, expResult.experiments, apiKey);
+        } else {
+          toolsResult = await identifyTools(contentInfo.transcript, expResult.experiments, apiKey);
+        }
+
+        // Checkpoint step 3 in DB
+        pipelineRun = await storage.updatePipelineRun(pipelineRun.id, {
+          status: 'tools_done',
+          toolsData: { tools: toolsResult.tools },
+        }) ?? pipelineRun;
+
+        sendEvent({ step: 'tools', tools: toolsResult.tools });
+      }
+
+      // ── Step 4: Costs ────────────────────────────────────────────────────
+      let detailedTools: any[];
+      let experimentsWithCosts: any[];
+      let enhancedSummary: any;
+
+      if (pipelineRun.costsData) {
+        // Replay from DB
+        ({ detailedTools, experimentsWithCosts, enhancedSummary } = pipelineRun.costsData);
+        console.log(`Step 4 replayed from DB`);
+        sendEvent({ step: 'costs', experiments: experimentsWithCosts, tools: detailedTools });
+      } else {
+        ({ detailedTools, experimentsWithCosts, enhancedSummary } = await buildDetailedResults(
+          expResult.experiments,
+          toolsResult.tools
+        ));
+
+        // Checkpoint step 4 in DB
+        pipelineRun = await storage.updatePipelineRun(pipelineRun.id, {
+          status: 'costs_done',
+          costsData: { experimentsWithCosts, detailedTools, enhancedSummary },
+        }) ?? pipelineRun;
+
+        sendEvent({ step: 'costs', experiments: experimentsWithCosts, tools: detailedTools });
+      }
+
+      // ── Step 5: Summary + Save ───────────────────────────────────────────
+      const processingTime = Math.round((Date.now() - startTime) / 1000);
+      const sessionHash = req.sessionID ? hashSessionId(req.sessionID) : null;
+
+      const savedAnalysis = await storage.createAnalysis({
+        url,
+        title: contentInfo.title,
+        platform: contentInfo.platform,
+        duration: contentInfo.duration,
+        transcript: contentInfo.transcript,
+        transcriptSource: contentInfo.transcriptSource,
+        sessionHash,
+        experiments: experimentsWithCosts,
+        tools: detailedTools,
+        summary: enhancedSummary,
+        processingTime,
+        learningsUsed: expResult.learningIdsUsed || []
+      });
+
+      // Mark pipeline run as completed so future requests use the analysis cache
+      await storage.updatePipelineRun(pipelineRun.id, { status: 'completed' });
+
+      const responseContentInfo = {
+        title: contentInfo.title,
+        duration: contentInfo.duration,
+        platform: contentInfo.platform,
+        url,
+        transcriptSource: contentInfo.transcriptSource
+      };
+
+      sendEvent({ step: 'summary', summary: enhancedSummary, id: savedAnalysis.id, contentInfo: responseContentInfo });
+      sendEvent({ step: 'done' });
+      res.end();
+
+    } catch (error) {
+      console.error('Streaming analysis failed:', error);
+      const message = error instanceof Error ? error.message : 'Analysis failed';
+      // Best-effort: persist the error on the pipeline run so retries know the last failure reason
+      try {
+        const failedRun = await storage.getActivePipelineRunByUrl(url);
+        if (failedRun) {
+          await storage.updatePipelineRun(failedRun.id, { status: 'failed', error: message });
+        }
+      } catch { /* ignore secondary failure */ }
+      if (error instanceof QuotaExceededError) {
+        sendError('Service temporarily busy. Please wait and try again.');
+      } else {
+        sendError(message);
+      }
     }
   });
 

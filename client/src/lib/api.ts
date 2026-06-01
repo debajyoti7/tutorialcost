@@ -9,6 +9,7 @@ export interface AnalysisResponse {
     duration: string;
     platform: 'YouTube' | 'Podcast';
     url: string;
+    transcriptSource?: 'youtube' | 'ai-generated' | 'description-only' | string;
   };
   experiments: {
     id: string;
@@ -83,7 +84,7 @@ export interface ApiError {
 export class AnalysisError extends Error {
   type: string;
   details?: string;
-  
+
   constructor(type: string, message: string, details?: string) {
     super(message);
     this.type = type;
@@ -114,7 +115,7 @@ export async function analyzeContent(url: string): Promise<AnalysisResponse> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
-  
+
   const provider = getStoredProvider();
   const apiKey = getStoredApiKey();
 
@@ -126,7 +127,7 @@ export async function analyzeContent(url: string): Promise<AnalysisResponse> {
   } else if (provider === 'openrouter') {
     headers['X-AI-Provider'] = 'openrouter';
   }
-  
+
   const response = await fetch('/api/analyze', {
     method: 'POST',
     headers,
@@ -146,6 +147,62 @@ export async function analyzeContent(url: string): Promise<AnalysisResponse> {
   return response.json();
 }
 
+// SSE streaming event types
+export type StreamStep =
+  | { step: 'transcription'; source: string; wordCount: number; transcript: string }
+  | { step: 'experiments'; experiments: AnalysisResponse['experiments'] }
+  | { step: 'tools'; tools: AnalysisResponse['tools'] }
+  | { step: 'costs'; experiments: AnalysisResponse['experiments']; tools: AnalysisResponse['tools'] }
+  | { step: 'summary'; summary: AnalysisResponse['summary']; id: string; contentInfo: AnalysisResponse['contentInfo'] }
+  | { step: 'done' }
+  | { step: 'error'; message: string };
+
+export interface StreamingCallbacks {
+  onStep: (event: StreamStep) => void;
+  onError: (message: string) => void;
+  onDone: () => void;
+}
+
+export function analyzeContentStreaming(url: string, callbacks: StreamingCallbacks): () => void {
+  const provider = getStoredProvider();
+  const apiKey = getStoredApiKey();
+
+  const params = new URLSearchParams({ url, provider });
+  if (apiKey) params.set('apiKey', apiKey);
+
+  const streamUrl = `/api/analyze/stream?${params.toString()}`;
+  const eventSource = new EventSource(streamUrl, { withCredentials: true });
+
+  eventSource.onmessage = (event) => {
+    try {
+      const data: StreamStep = JSON.parse(event.data);
+
+      if (data.step === 'error') {
+        eventSource.close();
+        callbacks.onError((data as any).message || 'Unknown error');
+        return;
+      }
+
+      if (data.step === 'done') {
+        eventSource.close();
+        callbacks.onDone();
+        return;
+      }
+
+      callbacks.onStep(data);
+    } catch {
+      // Ignore malformed events
+    }
+  };
+
+  eventSource.onerror = () => {
+    eventSource.close();
+    callbacks.onError('Connection lost. Please try again.');
+  };
+
+  return () => eventSource.close();
+}
+
 export async function getAnalyses(): Promise<{
   id: string;
   title: string;
@@ -160,7 +217,7 @@ export async function getAnalyses(): Promise<{
   createdAt: string;
 }[]> {
   const response = await fetch('/api/analyses');
-  
+
   if (!response.ok) {
     throw new Error('Failed to fetch analyses');
   }
@@ -170,7 +227,7 @@ export async function getAnalyses(): Promise<{
 
 export async function getAnalysis(id: string): Promise<AnalysisResponse> {
   const response = await fetch(`/api/analyses/${id}`);
-  
+
   if (!response.ok) {
     throw new Error('Failed to fetch analysis');
   }
